@@ -1,0 +1,134 @@
+from typing import List
+from gpiozero import OutputDevice
+import asyncio
+
+import RPi.GPIO as GPIO
+
+from services.api import APIService
+from services.controller_config import ControllerConfigService
+
+from models.device import DeviceResponse, Device
+
+
+
+class ControllerDevice:
+    devices: list[Device]
+    controller_config_service: ControllerConfigService
+    api_service: APIService
+    controller_device_id: str | None = None
+
+    def __init__(self, controller_config_service: ControllerConfigService,api_service: APIService):
+        self.controller_config_service = controller_config_service
+        self.api_service = api_service
+        # self.initialize() # DONOT INITIALIZE IT HERE, Already initialized in server.py @asynccontextmanager lifespan function
+
+    def initialize(self):
+        try:
+            self.load_data()
+            self.release_all_rpi_gpio_resources()
+            self.initialize_output_devices()
+        except Exception as e:
+            print(f"Error initializing ControllerDevice: {e}")
+            raise Exception(f"Error initializing ControllerDevice: {e}")
+
+    def load_data(self):
+        if self.controller_config_service.is_configured():
+            controller_device_id = self.controller_config_service.get("controllerDevice", "id")
+            if controller_device_id is not None:
+                self.controller_device_id = controller_device_id
+                controller_device_data = self.api_service.get_controller_device_data(controller_device_id)
+                self.devices = []
+                for device in controller_device_data.devices:
+                    self.devices.append(Device(device))
+
+    def release_all_rpi_gpio_resources(self):
+        GPIO.cleanup()
+        GPIO.setmode(GPIO.BCM)
+
+    def initialize_output_devices(self):
+        try:
+            for device in self.devices:
+                device.output_device = OutputDevice(
+                    device.pin_number,
+                    active_high=False
+                )
+                if device.status:
+                    device.output_device.on()
+                else:
+                    device.output_device.off()
+        except Exception as e:
+            print(f"Error initializing output devices: {e}")
+            raise Exception(f"Error initializing output devices: {e}")
+
+    def add_device(self, device_res: DeviceResponse):
+        device = Device(device_res)
+        device.output_device = OutputDevice(
+            device.pin_number,
+            active_high=False
+        )
+        self.devices.append(device)
+
+    def get_device(self, id: str):
+        try:
+            for device in self.devices:
+                if device.id == id:
+                    return device
+        except Exception as e:
+            print(f"Error getting device: {e}")
+            return None
+
+    def get_scheduled_devices(self) -> List[Device] | None:
+        scheduled_devices: List[Device] = []
+        for device in self.devices:
+            if device.is_scheduled:
+                scheduled_devices.append(device)
+        return scheduled_devices
+
+    def switch_device(self, id: str, status: bool):
+        try:
+            device = self.get_device(id)
+            output_device = device.output_device if device is not None else None
+
+            if output_device is not None:
+                if status:
+                    output_device.on()
+                else:
+                    output_device.off()
+
+                if device is not None:
+                    status_from = device.status
+                    status_to = status
+                    device.status = status
+                    if self.controller_device_id is not None and status_from != status_to:
+                        asyncio.create_task(
+                            self.api_service.create_device_control_log(
+                                self.controller_device_id,
+                                device.id,
+                                status_from,
+                                status_to 
+                            )
+                        )
+            else:
+                if device is None:
+                    raise Exception(f"Device with id '{id}' not found.")
+                if output_device is None:
+                    raise Exception(f"Output Device is not initialized.")
+        except Exception as e:
+            print(f"Error switching device: {e}")
+            raise Exception(f"Error switching device: {e}")
+
+    def update_device(self, device_res: DeviceResponse):
+        self.remove_device(device_res.id)
+        self.add_device(device_res)
+
+    def remove_device(self, device_id: str):
+        device = self.get_device(device_id)
+        if device is not None:
+            output_device = device.output_device
+            if output_device is not None:
+                output_device.close()
+            self.devices.remove(device)
+
+    def remove_multiple_devices(self, device_ids: list[str]):
+        for device_id in device_ids:
+            self.remove_device(device_id)

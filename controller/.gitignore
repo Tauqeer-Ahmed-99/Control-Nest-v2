@@ -1,0 +1,110 @@
+# ==============================
+# Python
+# ==============================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+
+# ==============================
+# Virtual Environments
+# ==============================
+venv/
+.venv/
+env/
+ENV/
+.python-version
+
+# ==============================
+# Environment Variables & Secrets
+# ==============================
+.env
+.env.*
+!.env.example
+!.env.sample
+
+# ==============================
+# Distribution / Packaging
+# ==============================
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+
+# ==============================
+# Testing & Coverage
+# ==============================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+nosetests.xml
+test-results/
+.pytype/
+.mypy_cache/
+.dmypy.json
+.pyre/
+
+# ==============================
+# FastAPI / Uvicorn Logs
+# ==============================
+*.log
+logs/
+uvicorn.log
+
+# ==============================
+# IDEs & Editors
+# ==============================
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# ==============================
+# Jupyter
+# ==============================
+.ipynb_checkpoints/
+
+# ==============================
+# OS Files
+# ==============================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ==============================
+# Type Checking / Linting
+# ==============================
+.ruff_cache/
+.pyright/
+.pyre/
+
+# ==============================
+# Temporary Files
+# ==============================
+*.tmp
+*.bak
+*.orig
+.cache/
+
+# ==============================
+# Database / Local Data
+# ==============================
+*.sqlite
+*.sqlite3
+*.db
+
+# ==============================
+# Local Configuration
+# ==============================
+instance/
+
+.lgd*

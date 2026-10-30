@@ -1,0 +1,56 @@
+import os
+from typing import Annotated
+
+from clerk_backend_api import Clerk
+from clerk_backend_api.security import authenticate_request
+from clerk_backend_api.security.types import AuthenticateRequestOptions
+
+from dotenv import load_dotenv
+
+from fastapi import Depends, HTTPException, Request
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
+load_dotenv()
+
+CLERK_SECRET_KEY = os.getenv('CLERK_SECRET_KEY')
+
+if CLERK_SECRET_KEY is None:
+    raise Exception("CLERK_SECRET_KEY is not defined in .env")
+
+clerk = Clerk(bearer_auth=CLERK_SECRET_KEY)
+
+
+security = HTTPBearer(
+    scheme_name="Clerk",
+    description="Enter your Clerk session token.",
+    auto_error=False,
+)
+
+
+def require_auth(
+    request: Request,
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None,
+        Depends(security),
+    ] = None,
+) -> tuple[str, str]:
+    state = clerk.authenticate_request(
+        request,
+        AuthenticateRequestOptions(
+            accepts_token=["session_token"]
+        ),
+    )
+
+    if not state.is_signed_in:
+        print("Clerk auth failure:", state.reason)
+        print("Clerk auth message:", state.message)
+        raise HTTPException(
+            status_code=401,
+            detail="Unauthorized",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user_id = str(state.payload["sub"]) # type: ignore
+    access_token = str(state.token)
+
+    return user_id, access_token
