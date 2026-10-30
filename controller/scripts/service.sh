@@ -51,4 +51,4 @@ sudo systemctl enable "${SERVICE_NAME}"
 sudo systemctl restart "${SERVICE_NAME}"
 
 # Display service status
-sudo systemctl status "${SERVICE_NAME}" # --no-pager
+sudo systemctl status "${SERVICE_NAME}" --no-pager
