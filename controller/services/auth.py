@@ -1,7 +1,6 @@
 import os
 from typing import Annotated
 
-from clerk_backend_api import Clerk
 from clerk_backend_api.security import authenticate_request
 from clerk_backend_api.security.types import AuthenticateRequestOptions
 
@@ -12,12 +11,10 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 load_dotenv()
 
-CLERK_SECRET_KEY = os.getenv('CLERK_SECRET_KEY')
+CLERK_JWT_KEY = os.getenv('CLERK_JWT_KEY')
 
-if CLERK_SECRET_KEY is None:
-    raise Exception("CLERK_SECRET_KEY is not defined in .env")
-
-clerk = Clerk(bearer_auth=CLERK_SECRET_KEY)
+if CLERK_JWT_KEY is None:
+    raise Exception("CLERK_JWT_KEY is not defined in .env")
 
 
 security = HTTPBearer(
@@ -34,9 +31,10 @@ def require_auth(
         Depends(security),
     ] = None,
 ) -> tuple[str, str]:
-    state = clerk.authenticate_request(
+    state = authenticate_request(
         request,
         AuthenticateRequestOptions(
+            jwt_key=CLERK_JWT_KEY,
             accepts_token=["session_token"]
         ),
     )

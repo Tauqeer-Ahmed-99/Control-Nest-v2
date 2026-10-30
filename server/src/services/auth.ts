@@ -58,7 +58,7 @@ export const authenticate = async (payload: Request | TokenString) => {
 const expectedEncodedAuth = Buffer.from(
   `${env.variables.CONTROLLER_USERNAME}:${env.variables.CONTROLLER_PASSWORD}`,
   "utf-8",
-).toBase64();
+).toString("base64");
 
 export const authenticateControllerDevice = async (req: Request) => {
   const encodedAuth = req.headers.get("Authorization")?.replace("Basic ", "");

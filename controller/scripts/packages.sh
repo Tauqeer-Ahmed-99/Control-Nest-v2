@@ -2,20 +2,14 @@
 
 set -e
 
-echo "Creating venv..."
-
-python -m venv .venv
-source .venv/bin/activate
-
-echo ".venv activated"
-
-echo "Installing dependencies..."
-
 echo "Updating packages..."
 sudo apt-get update -y
 
 echo "Upgrading packages..."
 sudo apt-get upgrade -y
+
+echo "Installing system dependencies..."
+sudo apt-get install -y ca-certificates curl python3 python3-pip python3-venv
 
 echo "Installing cloudflared..."
 
@@ -32,5 +26,11 @@ sudo apt-get install -y cloudflared
 
 cloudflared --version
 
+echo "Creating venv..."
+python3 -m venv .venv
+source .venv/bin/activate
+
+echo ".venv activated"
+echo "Installing Python dependencies..."
 echo "Installing requirements.txt..."
-pip install -r requirements.txt
+python -m pip install -r requirements.txt

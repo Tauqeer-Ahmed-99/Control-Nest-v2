@@ -51,7 +51,7 @@ The source currently expects the following environment variable names. Supply va
 
 - `SERVER_URL`
 - `API_USERNAME` and `API_PASSWORD`
-- `CLERK_SECRET_KEY`
+- `CLERK_JWT_KEY` (the PEM public key used to verify Clerk session tokens; the controller does not need `CLERK_SECRET_KEY`)
 - `APP_PERSISTENT_STORAGE_PATH`
 
 ## Development entry points

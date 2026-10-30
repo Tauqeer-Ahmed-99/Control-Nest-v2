@@ -8,7 +8,7 @@ SERVICE_NAME="autopihub"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
 USER_NAME=$(whoami)
-PROJECT_DIR="/home/${USER_NAME}/server"
+PROJECT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV_DIR="${PROJECT_DIR}/.venv"
 
 # Validate project environment
