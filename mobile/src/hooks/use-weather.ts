@@ -1,3 +1,5 @@
+import { APIResponse } from "@/models/api";
+import { ApiRoutes } from "@/routes/routes";
 import useApiQuery from "./use-api-query";
 
 export interface Condition {
@@ -55,14 +57,7 @@ export interface WeatherResponse {
 }
 
 const useWeather = () => {
-  return useApiQuery<WeatherResponse>("/v1/current.json" as string, {
-    baseUrl: process.env.EXPO_PUBLIC_WEATHER_API_URL,
-    searchParams: {
-      key: process.env.EXPO_PUBLIC_WEATHER_API_KEY as string,
-      q: "auto:ip",
-      aqi: "no",
-    },
-  });
+  return useApiQuery<APIResponse<WeatherResponse>>(ApiRoutes.Weather);
 };
 
 export default useWeather;

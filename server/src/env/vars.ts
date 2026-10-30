@@ -41,6 +41,14 @@ const EnvVarsSchema = z.object({
     .string()
     .nonempty({ error: "CLOUDFLARE_ZONE_ID is required." })
     .nonoptional({ error: "CLOUDFLARE_ZONE_ID is required." }),
+  WEATHER_API_URL: z
+    .url({ error: "WEATHER_API_URL must be a valid URL." })
+    .nonempty({ error: "WEATHER_API_URL is required." })
+    .nonoptional({ error: "WEATHER_API_URL is required." }),
+  WEATHER_API_KEY: z
+    .string()
+    .nonempty({ error: "WEATHER_API_KEY is required." })
+    .nonoptional({ error: "WEATHER_API_KEY is required." }),
 });
 
 const {

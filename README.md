@@ -40,12 +40,12 @@ The source currently expects the following environment variable names. Supply va
 - `DEV_DATABASE_URL` and `PROD_DATABASE_URL`
 - `CONTROLLER_USERNAME` and `CONTROLLER_PASSWORD`
 - `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ACCOUNT_API_TOKEN`, and `CLOUDFLARE_ZONE_ID`
+- `WEATHER_API_URL` and `WEATHER_API_KEY`
 
 ### Mobile app (`mobile/`)
 
 - `EXPO_PUBLIC_SERVER_URL`
 - `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY`
-- `EXPO_PUBLIC_WEATHER_API_URL` and `EXPO_PUBLIC_WEATHER_API_KEY` for the weather integration
 
 ### Home controller (`controller/`)
 

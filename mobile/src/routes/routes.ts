@@ -29,6 +29,7 @@ export enum ApiRoutes {
   RemoveDevice = "/api/v1/device",
   AvailableGPIOPins = "/api/v1/gpio-pins",
   EnergyConsumption = "/api/v1/house/energy-consumption",
+  Weather = "/api/v1/weather",
   DeviceControlLogs = "/api/v1/device-control-logs",
   Password = "/api/v1/controller-device/password",
   ControllerHealth = "/api/v1/controller-device/health",

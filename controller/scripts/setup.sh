@@ -53,7 +53,7 @@ CONTROLLER_DIR="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
 cd "$CONTROLLER_DIR"
 
 if [[ ! -f .env ]]; then
-    echo "Missing ${CONTROLLER_DIR}/.env. Copy .env.example to .env, fill in the controller settings, and run setup again." >&2
+    echo "Missing ${CONTROLLER_DIR}/.env. Add the controller environment settings and run setup again." >&2
     exit 1
 fi
 

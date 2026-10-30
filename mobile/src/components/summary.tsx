@@ -119,7 +119,7 @@ const Summary = () => {
   const houseId = useHouseId();
   const devices = useDevicesData();
   const { data: weather, isLoading: isWeatherLoading } = useWeather();
-  const icon = useWeatherIcons(weather?.current?.condition?.text ?? "");
+  const icon = useWeatherIcons(weather?.data?.current?.condition?.text ?? "");
   const [calculateEnergyConsumption, setCalculateEnergyConsumption] =
     useState(false);
   const {
@@ -141,10 +141,10 @@ const Summary = () => {
     energyConsumptionFetchStatus === "idle";
 
   summaryItems[0].icon = icon;
-  summaryItems[0].primaryText = `${weather?.current?.temp_c ?? ""}° C`;
+  summaryItems[0].primaryText = `${weather?.data?.current?.temp_c ?? ""}° C`;
   summaryItems[0].secondaryText = isWeatherLoading
     ? "Loading"
-    : (weather?.location?.name ?? "");
+    : (weather?.data?.location?.name ?? "");
 
   summaryItems[1].primaryText = devices
     ? devices.filter((device) => device.status).length.toString()

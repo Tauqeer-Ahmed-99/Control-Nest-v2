@@ -15,6 +15,8 @@ CLERK_JWT_KEY = os.getenv('CLERK_JWT_KEY')
 
 if CLERK_JWT_KEY is None:
     raise Exception("CLERK_JWT_KEY is not defined in .env")
+else:
+    CLERK_JWT_KEY = CLERK_JWT_KEY.replace('\\n', '\n')
 
 
 security = HTTPBearer(
