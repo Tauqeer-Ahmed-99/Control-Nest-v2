@@ -4,8 +4,9 @@ import { authenticate } from "@/services/auth";
 import { createRoom, removeRoom } from "@/services/rooms";
 import { validate } from "@/services/validation";
 import { NextRequest } from "next/server";
+import { withRequestObservability } from "@/services/request-observability";
 
-export const POST = async (req: NextRequest) => {
+export const POST = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);
 
@@ -23,9 +24,9 @@ export const POST = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});
 
-export const DELETE = async (req: NextRequest) => {
+export const DELETE = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user, token: accessToken } = await authenticate(req);
 
@@ -43,4 +44,4 @@ export const DELETE = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});

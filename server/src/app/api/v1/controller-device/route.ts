@@ -2,8 +2,9 @@ import { APIResponse } from "@/models/api";
 import { authenticateControllerDevice } from "@/services/auth";
 import { getControllerDeviceData } from "@/services/controller-device";
 import { NextRequest } from "next/server";
+import { withRequestObservability } from "@/services/request-observability";
 
-export const GET = async (req: NextRequest) => {
+export const GET = withRequestObservability(async (req: NextRequest) => {
   try {
     await authenticateControllerDevice(req);
 
@@ -19,4 +20,4 @@ export const GET = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});

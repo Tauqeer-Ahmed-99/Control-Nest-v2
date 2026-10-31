@@ -21,6 +21,7 @@ from models.api import APIResponse
 from models.config_controller import ConfigController
 from models.controller_device import DeviceResponse, SwitchDevice, RemoveMultipleDevices
 from services.schedule import ScheduleService
+from services.observability import ObservabilityMiddleware
 
 
 load_dotenv()
@@ -57,6 +58,12 @@ app.add_middleware(
     allow_credentials=False,   # Must be False if allow_origins=["*"]
     allow_methods=["*"],       # Allows all methods
     allow_headers=["*"],       # Allows all headers
+    expose_headers=["X-Request-ID"],
+)
+app.add_middleware(
+    ObservabilityMiddleware,
+    api_service=api_service,
+    config_service=controller_config_service,
 )
 
 @app.get("/", status_code=200)

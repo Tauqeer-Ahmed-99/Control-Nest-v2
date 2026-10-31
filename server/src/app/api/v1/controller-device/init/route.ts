@@ -4,8 +4,9 @@ import { authenticate, authenticateControllerDevice } from "@/services/auth";
 import { initControllerDevice } from "@/services/controller-device";
 import { validate } from "@/services/validation";
 import { NextRequest } from "next/server";
+import { withRequestObservability } from "@/services/request-observability";
 
-export const POST = async (req: NextRequest) => {
+export const POST = withRequestObservability(async (req: NextRequest) => {
   try {
     const body = validate({
       schema: InitControllerDeviceSchema,
@@ -31,4 +32,4 @@ export const POST = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});

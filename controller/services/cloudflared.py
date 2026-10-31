@@ -27,17 +27,8 @@ class CloudflaredService:
                 check=False,
             )
 
-            print("[Cloudflared] Exit code:", result.returncode)
-            print("[Cloudflared] stderr:", result.stderr)
-            print("[Cloudflared] stdout:", result.stdout)
-
             if result.returncode != 0:
-                raise APIError(
-                    message=(
-                        "Cloudflared installation failed: "
-                        f"{result.stderr.strip() or result.stdout.strip()}"
-                    )
-                )
+                raise APIError(message="Cloudflared installation failed.")
 
         except subprocess.TimeoutExpired as exc:
             raise APIError(
@@ -46,7 +37,7 @@ class CloudflaredService:
 
         except OSError as exc:
             raise APIError(
-                message=f"Failed to execute cloudflared: {exc}"
+                message="Failed to execute cloudflared."
             ) from exc
 
     def uninstall_cloudflared_service(self):
@@ -65,17 +56,8 @@ class CloudflaredService:
                 check=False,
             )
         
-            print("[Cloudflared] Exit code:", result.returncode)
-            print("[Cloudflared] stderr:", result.stderr)
-            print("[Cloudflared] stdout:", result.stdout)
-        
             if result.returncode != 0:
-                raise APIError(
-                    message=(
-                        "Cloudflared uninstallation failed: "
-                        f"{result.stderr.strip() or result.stdout.strip()}"
-                    )
-                )
+                raise APIError(message="Cloudflared uninstallation failed.")
         
         except subprocess.TimeoutExpired as exc:
             raise APIError(
@@ -84,5 +66,5 @@ class CloudflaredService:
         
         except OSError as exc:
             raise APIError(
-                message=f"Failed to execute uninstall cloudflared: {exc}"
+                message="Failed to execute uninstall cloudflared."
             ) from exc

@@ -12,6 +12,17 @@ import { hashPassword, verifyPassword } from "./password";
 import { eq } from "drizzle-orm";
 import { authorizeHouse, authorizeHouseByControllerDevice } from "./auth-house";
 import { HealthData } from "@/models/contoller-device";
+import { getRequestId } from "./observability-context";
+
+const controllerRequestHeaders = (accessToken: string) => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    authorization: `Bearer ${accessToken}`,
+  };
+  const requestId = getRequestId();
+  if (requestId) headers["X-Request-ID"] = requestId;
+  return headers;
+};
 
 export const initControllerDevice = async ({
   houseName,
@@ -252,10 +263,7 @@ export const checkControllerDeviceHealth = async ({
   const url = await getControllerDeviceUrlById(controllerDeviceId);
 
   const response = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      authorization: `Bearer ${accessToken}`,
-    },
+    headers: controllerRequestHeaders(accessToken),
   });
 
   const { success, message, data }: APIResponse<HealthData> =
@@ -288,10 +296,7 @@ export const createPhysicalDevice = async (
   const response = await fetch(`${url}/device`, {
     method: "POST",
     body,
-    headers: {
-      "Content-Type": "application/json",
-      authorization: `Bearer ${accessToken}`,
-    },
+    headers: controllerRequestHeaders(accessToken),
   });
 
   const { success, message }: APIResponse = await response.json();
@@ -311,10 +316,7 @@ export const updatePhysicalDevice = async (
   const response = await fetch(`${url}/device`, {
     method: "PUT",
     body: JSON.stringify(device),
-    headers: {
-      "Content-Type": "application/json",
-      authorization: `Bearer ${accessToken}`,
-    },
+    headers: controllerRequestHeaders(accessToken),
   });
 
   const { success, message }: APIResponse = await response.json();
@@ -334,10 +336,7 @@ export const removePhysicalDevice = async (
   const response = await fetch(`${url}/device`, {
     method: "DELETE",
     body: JSON.stringify({ deviceIds }),
-    headers: {
-      "Content-Type": "application/json",
-      authorization: `Bearer ${accessToken}`,
-    },
+    headers: controllerRequestHeaders(accessToken),
   });
 
   const { success, message }: APIResponse = await response.json();
@@ -357,10 +356,7 @@ export const switchPhysicalDevice = async (
   const response = await fetch(`${url}/device/switch`, {
     method: "POST",
     body: JSON.stringify(device),
-    headers: {
-      "Content-Type": "application/json",
-      authorization: `Bearer ${accessToken}`,
-    },
+    headers: controllerRequestHeaders(accessToken),
   });
 
   const { success, message }: APIResponse = await response.json();

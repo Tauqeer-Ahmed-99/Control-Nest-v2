@@ -4,8 +4,9 @@ import { authenticate } from "@/services/auth";
 import { checkOrSetControllerPassword } from "@/services/controller-device";
 import { validate } from "@/services/validation";
 import { NextRequest } from "next/server";
+import { withRequestObservability } from "@/services/request-observability";
 
-export const POST = async (req: NextRequest) => {
+export const POST = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);
 
@@ -25,4 +26,4 @@ export const POST = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});

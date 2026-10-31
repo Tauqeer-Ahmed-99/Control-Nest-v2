@@ -4,8 +4,9 @@ import { authenticate } from "@/services/auth";
 import { getGPIOPins } from "@/services/gpio-pins";
 import { validate } from "@/services/validation";
 import { NextRequest } from "next/server";
+import { withRequestObservability } from "@/services/request-observability";
 
-export const GET = async (req: NextRequest) => {
+export const GET = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);
 
@@ -23,4 +24,4 @@ export const GET = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});

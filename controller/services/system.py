@@ -47,8 +47,6 @@ class SystemService:
         if result.error is not None:
             raise APIError(message=str(result.error))
 
-        print(result.data)
-
         if result.data and result.data.tunnel is None:
             raise APIError(message=str(result.error))
         

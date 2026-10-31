@@ -32,8 +32,6 @@ async function tryCatch(
       error: null,
     };
   } catch (error) {
-    console.log(`tryCatch:`, error);
-
     if (defaultValue !== undefined) {
       return {
         data: defaultValue,

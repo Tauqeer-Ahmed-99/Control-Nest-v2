@@ -3,6 +3,7 @@ import { createClerkClient, verifyToken } from "@clerk/backend";
 import env from "@/env/vars";
 import { APIError } from "@/models/api";
 import tryCatch from "@/utils/try-catch";
+import { setObservabilityUserId } from "./observability-context";
 
 export const clerk = createClerkClient({
   secretKey: env.variables.CLERK_SECRET_KEY,
@@ -51,6 +52,8 @@ export const authenticate = async (payload: Request | TokenString) => {
       statusCode: 400,
     });
   }
+
+  setObservabilityUserId(user.id);
 
   return { user, token };
 };

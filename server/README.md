@@ -8,6 +8,21 @@ against that database. It moves each stored BCM GPIO value into `gpioPinNumber`
 and converts `pinNumber` to the physical Raspberry Pi header position. New,
 empty databases can use `npm run db-push` as usual.
 
+## Request observability migration
+
+Before deploying request history to an existing database, run
+`src/database/migrations/add-observability-logs.sql` once against that database.
+New, empty databases can use `npm run db-push` to create the table from the
+Drizzle schema.
+
+API requests carry an `X-Request-ID` UUID from the mobile app through the server
+and controller. The server stores structured request, response, and error
+records in `observability_logs`; the controller also appends local JSONL records
+under its persistent `stores` directory. `Authorization`, cookies, passwords,
+tokens, credentials, and API keys are redacted before storage. Signed-in users
+can inspect traces for their own requests and controllers in **Settings →
+Request history** in the mobile app.
+
 ## Getting Started
 
 First, run the development server:

@@ -91,6 +91,25 @@ const TabsLayout = () => {
             }}
           />
           <Stack.Screen
+            name="observability"
+            options={{
+              headerShown: true,
+              headerTintColor: theme.colors.black,
+              headerTitle: "Request history",
+              headerTitleAlign: "center",
+              headerShadowVisible: false,
+              headerTitleStyle: {
+                color: theme.colors.black,
+                fontFamily: "Lexend_600SemiBold",
+                fontSize: 17,
+              },
+              headerStyle: {
+                backgroundColor: theme.colors.primary,
+              },
+              statusBarTranslucent: true,
+            }}
+          />
+          <Stack.Screen
             name="house-members"
             options={{
               headerShown: true,

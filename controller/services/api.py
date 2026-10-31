@@ -1,5 +1,6 @@
 import os
 import json
+from typing import Any
 
 from pydantic import TypeAdapter
 import requests
@@ -10,6 +11,7 @@ from utils.try_except import try_except
 from models.api import APIResponse, APIError
 from models.cotroller_init import ControllerInitResponse
 from models.controller_device import ControllerDeviceResponse
+from services.observability import current_request_id
 
 load_dotenv()
 
@@ -31,13 +33,18 @@ if API_PASSWORD is None:
 class APIService:
     base_url: str = SERVER_URL
     basic_auth: HTTPBasicAuth = HTTPBasicAuth(username=f"{API_USERNAME}",password=f"{API_PASSWORD}")
+
+    @staticmethod
+    def request_headers(request_id: str | None = None) -> dict[str, str]:
+        return {"X-Request-ID": request_id or current_request_id()}
     
     async def init_controller(self, user_id: str, access_token: str, controller_name: str):
         result = await try_except(
             requests.post(
                 f"{self.base_url}/api/v1/controller-device/init",
                 data=json.dumps({"userId": user_id, "accessToken": access_token, "controllerName": controller_name}),
-                auth=self.basic_auth
+                auth=self.basic_auth,
+                headers=self.request_headers(),
             )
         )
 
@@ -70,7 +77,8 @@ class APIService:
         result = requests.get(
             f"{self.base_url}/api/v1/controller-device",
             params={"controllerDeviceId": controller_device_id},
-            auth=self.basic_auth
+            auth=self.basic_auth,
+            headers=self.request_headers(),
         )
 
         response = TypeAdapter(APIResponse[ControllerDeviceResponse]).validate_python(result.json())
@@ -88,20 +96,36 @@ class APIService:
             requests.post(
                 f"{self.base_url}/api/v1/controller-device/device-control-logs",
                 data=json.dumps({"controllerDeviceId": controller_device_id, "deviceId": device_id, "statusFrom": status_from, "statusTo": status_to}),
-                auth=self.basic_auth
+                auth=self.basic_auth,
+                headers=self.request_headers(),
             )
         )
 
         if result.error is not None:
-            print(str(result.error))
-            # raise APIError(message=str(result.error))
+            return
+
+    def push_observability_event(self, event: dict[str, Any]) -> None:
+        request_id = str(event.get("requestId") or current_request_id())
+        for attempt in range(3):
+            try:
+                response = requests.post(
+                    f"{self.base_url}/api/v1/observability/events",
+                    json=event,
+                    auth=self.basic_auth,
+                    headers=self.request_headers(request_id),
+                    timeout=3,
+                )
+                if response.ok:
+                    return
+            except requests.RequestException:
+                pass
+
+            if attempt < 2:
+                import time
+
+                time.sleep(0.2 * (attempt + 1))
 
 
 
 
 
-            
-
-
-
-    

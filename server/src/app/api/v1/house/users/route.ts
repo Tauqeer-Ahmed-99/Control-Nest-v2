@@ -2,8 +2,9 @@ import { APIResponse } from "@/models/api";
 import { authenticate } from "@/services/auth";
 import { searchHouseUsers } from "@/services/house";
 import { NextRequest } from "next/server";
+import { withRequestObservability } from "@/services/request-observability";
 
-export const GET = async (req: NextRequest) => {
+export const GET = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);
 
@@ -16,4 +17,4 @@ export const GET = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});

@@ -29,3 +29,13 @@ The updater checks for the installed `autopihub` service first. If it is missing
 - `common.sh` contains the repository settings and shared archive download helper used by both scripts.
 
 Both commands should run as the normal Pi user. The scripts use `sudo` for system package and service operations.
+
+## Request observability
+
+The controller adds an `X-Request-ID` response header to each HTTP request and
+preserves that ID when it calls the cloud server. It appends structured request,
+response, and error records to
+`$APP_PERSISTENT_STORAGE_PATH/stores/observability.jsonl`, then sends each event
+to the server for the mobile Request history view. The controller file remains
+available when the cloud server cannot be reached. Credentials, cookies,
+passwords, tokens, and API keys are redacted before the event is stored.

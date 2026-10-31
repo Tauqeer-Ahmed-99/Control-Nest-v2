@@ -36,6 +36,7 @@ const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
 
 enum SettingOption {
   HouseMembers = "House members",
+  Observability = "Request history",
   LogoutUser = "Logout User",
   LogoutHouse = "Logout House",
   AboutUs = "About Us",
@@ -128,6 +129,22 @@ const Settings = () => {
         <MaterialIcons name="keyboard-arrow-right" size={24} color="grey" />
       ),
       onAction: () => router.push(getTypedRoute(Routes.HouseMembers)),
+      requiresConfirmation: false,
+    },
+    {
+      option: SettingOption.Observability,
+      label: "Request history",
+      iconLeft: (
+        <MaterialIcons
+          name="timeline"
+          size={20}
+          color={theme.colors.success}
+        />
+      ),
+      iconRight: (
+        <MaterialIcons name="keyboard-arrow-right" size={24} color="grey" />
+      ),
+      onAction: () => router.push(getTypedRoute(Routes.Observability)),
       requiresConfirmation: false,
     },
     {

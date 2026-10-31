@@ -9,6 +9,7 @@ export enum Routes {
   Rooms = "(tabs)/rooms",
   Device = "(tabs)/room/[roomId]/[deviceId]",
   ControlLogs = "(tabs)/room/[roomId]/[deviceId]/control-logs",
+  Observability = "(tabs)/observability",
   Devices = "(tabs)/devices",
   Notifications = "(tabs)/notifications",
   Settings = "(tabs)/settings",
@@ -31,6 +32,7 @@ export enum ApiRoutes {
   EnergyConsumption = "/api/v1/house/energy-consumption",
   Weather = "/api/v1/weather",
   DeviceControlLogs = "/api/v1/device-control-logs",
+  Observability = "/api/v1/observability",
   Password = "/api/v1/controller-device/password",
   ControllerHealth = "/api/v1/controller-device/health",
 }

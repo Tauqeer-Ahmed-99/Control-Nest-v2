@@ -42,8 +42,6 @@ def require_auth(
     )
 
     if not state.is_signed_in:
-        print("Clerk auth failure:", state.reason)
-        print("Clerk auth message:", state.message)
         raise HTTPException(
             status_code=401,
             detail="Unauthorized",

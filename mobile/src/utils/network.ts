@@ -1,3 +1,5 @@
+import * as Crypto from "expo-crypto";
+
 export interface ApiConfig<T = unknown> {
   baseUrl?: string;
   searchParams?: { [key: string]: any };
@@ -58,14 +60,11 @@ const request = <T = unknown>(
     }
   }
 
-  console.log(method, fullUrl);
-  if (headers) console.log("Headers", headers);
-  if (body) console.log("Body", body);
-
-  const requestHeaders: Record<string, string> = {
-    "Content-Type": "application/json",
-    ...(headers as Record<string, string>),
-  };
+  const requestHeaders = new Headers({ "Content-Type": "application/json" });
+  new Headers(headers).forEach((value, key) => requestHeaders.set(key, value));
+  if (!requestHeaders.has("X-Request-ID")) {
+    requestHeaders.set("X-Request-ID", Crypto.randomUUID());
+  }
 
   return fetch(fullUrl.toString(), {
     method,

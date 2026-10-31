@@ -57,7 +57,6 @@ async def try_except(
         return Success(data=result)
 
     except Exception as error:
-        print(f"TryExcept: {str(error)}")
         if default_value is not None:
             return Success(data=default_value)
 

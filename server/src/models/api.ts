@@ -46,7 +46,6 @@ export class APIResponse<T = undefined> {
   }
 
   static fromError(error: unknown) {
-    console.error(error);
     if (error instanceof APIError) {
       const { success, message, errors, statusCode } = error;
       return NextResponse.json(

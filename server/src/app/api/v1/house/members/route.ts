@@ -13,8 +13,9 @@ import {
 } from "@/services/house";
 import { validate } from "@/services/validation";
 import { NextRequest } from "next/server";
+import { withRequestObservability } from "@/services/request-observability";
 
-export const GET = async (req: NextRequest) => {
+export const GET = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);
 
@@ -26,9 +27,9 @@ export const GET = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});
 
-export const POST = async (req: NextRequest) => {
+export const POST = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);
 
@@ -46,9 +47,9 @@ export const POST = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});
 
-export const DELETE = async (req: NextRequest) => {
+export const DELETE = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);
 
@@ -62,9 +63,9 @@ export const DELETE = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});
 
-export const PATCH = async (req: NextRequest) => {
+export const PATCH = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);
 
@@ -78,4 +79,4 @@ export const PATCH = async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-};
+});
