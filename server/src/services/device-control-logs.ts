@@ -13,6 +13,7 @@ import {
   inArray,
 } from "drizzle-orm";
 import { authorizeHouse } from "./auth-house";
+import { measureRequestTiming } from "./observability-context";
 
 export const createLog = async ({
   deviceId,
@@ -25,14 +26,20 @@ export const createLog = async ({
   statusTo: boolean;
   controllerDeviceId: string;
 }) => {
-  const controllerDevice = await database.query.controllerDevices.findFirst({
-    where: { id: controllerDeviceId },
-    with: {
-      house: {
-        with: { rooms: { with: { devices: { where: { id: deviceId } } } } },
-      },
-    },
-  });
+  const controllerDevice = await measureRequestTiming(
+    "db-control-log-ownership-lookup",
+    () =>
+      database.query.controllerDevices.findFirst({
+        where: { id: controllerDeviceId },
+        with: {
+          house: {
+            with: {
+              rooms: { with: { devices: { where: { id: deviceId } } } },
+            },
+          },
+        },
+      }),
+  );
 
   const device = (controllerDevice?.house?.rooms ?? [])
     .flatMap((r) => r.devices)
@@ -46,12 +53,14 @@ export const createLog = async ({
     });
   }
 
-  await database.insert(deviceControlLogs).values({
-    deviceId,
-    statusChangedFrom: statusFrom,
-    statusChangedTo: statusTo,
-    createdBy: `CD-${controllerDeviceId}`,
-  });
+  await measureRequestTiming("db-control-log-insert", () =>
+    database.insert(deviceControlLogs).values({
+      deviceId,
+      statusChangedFrom: statusFrom,
+      statusChangedTo: statusTo,
+      createdBy: `CD-${controllerDeviceId}`,
+    }),
+  );
 };
 
 interface GetDeviceControlLogsParams {

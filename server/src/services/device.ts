@@ -9,6 +9,7 @@ import {
   switchPhysicalDevice,
   updatePhysicalDevice,
 } from "./controller-device";
+import { measureRequestTiming } from "./observability-context";
 import { getScheduledStatus } from "./schedule";
 
 export const createDevice = async (
@@ -222,10 +223,12 @@ export const switchDevice = async (
   userId: string,
   accessToken: string,
 ) => {
-  const device = await database.query.devices.findFirst({
-    where: { id: deviceId },
-    with: { room: true },
-  });
+  const device = await measureRequestTiming("db-device-lookup", () =>
+    database.query.devices.findFirst({
+      where: { id: deviceId },
+      with: { room: true },
+    }),
+  );
 
   if (!device) {
     throw new APIError({
@@ -234,38 +237,48 @@ export const switchDevice = async (
     });
   }
 
-  if (!device.room) {
+  const room = device.room;
+
+  if (!room) {
     throw new APIError({
       message: "Device room not found.",
       statusCode: 404,
     });
   }
 
-  await authorizeHouse({ houseId: device.room.houseId, userId });
+  await measureRequestTiming("db-house-authorization", () =>
+    authorizeHouse({ houseId: room.houseId, userId }),
+  );
 
-  const updatedDevice = await database.transaction(async (txn) => {
-    const results = await txn
-      .update(devices)
-      .set({ status: statusTo, modifiedBy: userId })
-      .where(eq(devices.id, deviceId))
-      .returning();
+  const updatedDevice = await measureRequestTiming(
+    "switch-transaction-total",
+    () =>
+      database.transaction(async (txn) => {
+        const results = await measureRequestTiming("db-device-update", () =>
+          txn
+            .update(devices)
+            .set({ status: statusTo, modifiedBy: userId })
+            .where(eq(devices.id, deviceId))
+            .returning(),
+        );
 
-    const updatedDevice = results.at(0);
+        const updatedDevice = results.at(0);
 
-    if (!updatedDevice) {
-      throw new APIError({
-        message: "Error while switching device.",
-      });
-    }
+        if (!updatedDevice) {
+          throw new APIError({
+            message: "Error while switching device.",
+          });
+        }
 
-    await switchPhysicalDevice(
-      txn,
-      { deviceId: updatedDevice.id, status: statusTo },
-      accessToken,
-    );
+        await switchPhysicalDevice(
+          txn,
+          { deviceId: updatedDevice.id, status: statusTo },
+          accessToken,
+        );
 
-    return updatedDevice;
-  });
+        return updatedDevice;
+      }),
+  );
 
   return updatedDevice;
 };

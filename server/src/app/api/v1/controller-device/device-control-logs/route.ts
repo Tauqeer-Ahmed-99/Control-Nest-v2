@@ -5,10 +5,13 @@ import { createLog } from "@/services/device-control-logs";
 import { validate } from "@/services/validation";
 import { NextRequest } from "next/server";
 import { withRequestObservability } from "@/services/request-observability";
+import { measureRequestTiming } from "@/services/observability-context";
 
 export const POST = withRequestObservability(async (req: NextRequest) => {
   try {
-    await authenticateControllerDevice(req);
+    await measureRequestTiming("auth-controller", () =>
+      authenticateControllerDevice(req),
+    );
 
     const body = await req.json();
 

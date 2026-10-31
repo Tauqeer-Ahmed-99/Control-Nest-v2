@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { NextRequest } from "next/server";
 import { recordServerObservabilityEvent } from "./request-observability-store";
 import {
+  getRequestTimings,
   getObservabilityUserId,
   runWithRequestContext,
 } from "./observability-context";
@@ -81,6 +82,25 @@ const controllerIdFromInput = (input: unknown) => {
     : null;
 };
 
+const formatDuration = (durationMs: number) =>
+  (Math.round(durationMs * 10) / 10).toString();
+
+const addServerTimingHeader = (
+  response: Response,
+  prePersistDurationMs: number,
+) => {
+  const existing = response.headers.get("Server-Timing");
+  const timings = getRequestTimings().map(
+    ({ name, durationMs }) => `${name};dur=${formatDuration(durationMs)}`,
+  );
+  timings.push(`pre-persist;dur=${formatDuration(prePersistDurationMs)}`);
+
+  response.headers.set(
+    "Server-Timing",
+    [existing, ...timings].filter(Boolean).join(", "),
+  );
+};
+
 export const withRequestObservability = <T extends (request: NextRequest) => Promise<Response> | Response>(
   handler: T,
   { record = true }: { record?: boolean } = {},
@@ -93,7 +113,7 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
     const createdAt = new Date();
     const startedAt = performance.now();
 
-    return runWithRequestContext({ requestId }, async () => {
+    return runWithRequestContext({ requestId, timings: [] }, async () => {
       const input = record ? await getInput(request) : null;
       let response: Response;
 
@@ -108,8 +128,14 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
       }
 
       response.headers.set(REQUEST_ID_HEADER, requestId);
-      if (!record) return response;
+      if (!record) {
+        addServerTimingHeader(response, performance.now() - startedAt);
+        return response;
+      }
 
+      const responseBody = parsePayload(await response.clone().text());
+      const prePersistDurationMs = Math.max(0, performance.now() - startedAt);
+      addServerTimingHeader(response, prePersistDurationMs);
       const output = {
         headers: redact(
           Object.fromEntries(
@@ -119,7 +145,7 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
             ]),
           ),
         ),
-        body: parsePayload(await response.clone().text()),
+        body: responseBody,
       };
       const event = {
         id: randomUUID(),
@@ -129,7 +155,7 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
         method: request.method,
         path: new URL(request.url).pathname,
         statusCode: response.status,
-        durationMs: Math.max(0, Math.round(performance.now() - startedAt)),
+        durationMs: Math.max(0, Math.round(prePersistDurationMs)),
         input,
         output,
         error: errorFrom(response.status, output),
@@ -137,7 +163,43 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
         controllerDeviceId: controllerIdFromInput(input),
       };
 
+      const persistenceStartedAt = performance.now();
       await recordServerObservabilityEvent(event);
+      const observabilityWriteMs = Math.max(
+        0,
+        performance.now() - persistenceStartedAt,
+      );
+      const previousServerTiming = response.headers.get("Server-Timing");
+      response.headers.set(
+        "Server-Timing",
+        [
+          previousServerTiming,
+          `observability-write;dur=${formatDuration(observabilityWriteMs)}`,
+        ]
+          .filter(Boolean)
+          .join(", "),
+      );
+
+      const path = new URL(request.url).pathname;
+      if (
+        path === "/api/v1/device/switch" ||
+        path === "/api/v1/controller-device/device-control-logs"
+      ) {
+        console.info(
+          JSON.stringify({
+            type: "request-timing",
+            requestId,
+            path,
+            prePersistMs: Math.round(prePersistDurationMs),
+            spans: getRequestTimings().map(({ name, durationMs }) => ({
+              name,
+              durationMs: Math.round(durationMs * 10) / 10,
+            })),
+            observabilityWriteMs: Math.round(observabilityWriteMs * 10) / 10,
+          }),
+        );
+      }
+
       return response;
     });
   }) as T;

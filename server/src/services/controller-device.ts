@@ -12,7 +12,7 @@ import { hashPassword, verifyPassword } from "./password";
 import { eq } from "drizzle-orm";
 import { authorizeHouse, authorizeHouseByControllerDevice } from "./auth-house";
 import { HealthData } from "@/models/contoller-device";
-import { getRequestId } from "./observability-context";
+import { getRequestId, measureRequestTiming } from "./observability-context";
 
 const controllerRequestHeaders = (accessToken: string) => {
   const headers: Record<string, string> = {
@@ -351,15 +351,21 @@ export const switchPhysicalDevice = async (
   device: { deviceId: string; status: boolean },
   accessToken: string,
 ) => {
-  const url = await getControllerDeviceUrlByDeviceId(device.deviceId, txn);
+  const url = await measureRequestTiming("db-controller-tunnel-lookup", () =>
+    getControllerDeviceUrlByDeviceId(device.deviceId, txn),
+  );
 
-  const response = await fetch(`${url}/device/switch`, {
-    method: "POST",
-    body: JSON.stringify(device),
-    headers: controllerRequestHeaders(accessToken),
-  });
-
-  const { success, message }: APIResponse = await response.json();
+  const { success, message }: APIResponse = await measureRequestTiming(
+    "controller-request",
+    async () => {
+      const response = await fetch(`${url}/device/switch`, {
+        method: "POST",
+        body: JSON.stringify(device),
+        headers: controllerRequestHeaders(accessToken),
+      });
+      return response.json();
+    },
+  );
 
   if (!success) {
     throw new APIError({ message });

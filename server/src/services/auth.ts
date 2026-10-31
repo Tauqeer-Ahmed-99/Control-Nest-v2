@@ -3,7 +3,10 @@ import { createClerkClient, verifyToken } from "@clerk/backend";
 import env from "@/env/vars";
 import { APIError } from "@/models/api";
 import tryCatch from "@/utils/try-catch";
-import { setObservabilityUserId } from "./observability-context";
+import {
+  measureRequestTiming,
+  setObservabilityUserId,
+} from "./observability-context";
 
 export const clerk = createClerkClient({
   secretKey: env.variables.CLERK_SECRET_KEY,
@@ -23,8 +26,12 @@ export const authenticate = async (payload: Request | TokenString) => {
     });
   }
 
-  const { data, error } = await tryCatch(
-    verifyToken(token, { secretKey: env.variables.CLERK_SECRET_KEY }),
+  const { data, error } = await measureRequestTiming(
+    "auth-verify-token",
+    () =>
+      tryCatch(
+        verifyToken(token, { secretKey: env.variables.CLERK_SECRET_KEY }),
+      ),
   );
 
   if (error) {
@@ -44,7 +51,9 @@ export const authenticate = async (payload: Request | TokenString) => {
     });
   }
 
-  const user = await clerk.users.getUser(userId);
+  const user = await measureRequestTiming("auth-user-lookup", () =>
+    clerk.users.getUser(userId),
+  );
 
   if (!user) {
     throw new APIError({
