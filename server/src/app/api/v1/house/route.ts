@@ -3,9 +3,26 @@ import { authenticate } from "@/services/auth";
 import { getHouse } from "@/services/house";
 import { NextRequest } from "next/server";
 import { withRequestObservability } from "@/services/request-observability";
-import { CreateHouseSchema } from "@/models/onboarding";
+import { CreateHouseSchema, HouseIdSchema } from "@/models/onboarding";
 import { validate } from "@/services/validation";
 import { createHouse } from "@/services/onboarding";
+import { removeHouse } from "@/services/resource-removal";
+
+export const DELETE = withRequestObservability(async (req: NextRequest) => {
+  try {
+    const { user } = await authenticate(req);
+    const params = validate({
+      schema: HouseIdSchema,
+      object: await req.json(),
+    });
+    return APIResponse.fromData({
+      data: await removeHouse(params, user.id),
+      message: "House removed.",
+    });
+  } catch (error) {
+    return APIResponse.fromError(error);
+  }
+});
 
 export const POST = withRequestObservability(async (req: NextRequest) => {
   try {

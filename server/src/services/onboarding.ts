@@ -59,13 +59,17 @@ export const listControllers = async (houseId: string, userId: string) => {
         apiKeyLastFour: true,
         installationId: true,
       },
-      with: { tunnel: { columns: { hostname: true } } },
+      with: {
+        tunnel: { columns: { hostname: true } },
+        devices: { columns: { id: true } },
+      },
     }),
   );
   if (error) throw new APIError({ message: "Unable to load controllers." });
-  return data.map(({ installationId, ...controller }) => ({
+  return data.map(({ installationId, devices, ...controller }) => ({
     ...controller,
     paired: Boolean(installationId),
+    deviceCount: devices.length,
   }));
 };
 export const createController = async (
@@ -76,23 +80,35 @@ export const createController = async (
   const id = randomUUID();
   const apiKey = generateControllerKey(id);
   const { data, error } = await tryCatch(
-    database
-      .insert(controllerDevices)
-      .values({
-        id,
-        houseId,
-        name,
-        createdBy: userId,
-        apiKeyHash: hashControllerKey(apiKey),
-        apiKeyLastFour: apiKey.slice(-4),
-      })
-      .returning({
-        id: controllerDevices.id,
-        name: controllerDevices.name,
-        houseId: controllerDevices.houseId,
-      }),
+    database.transaction(async (tx) => {
+      const [house] = await tx
+        .select({ id: houses.id })
+        .from(houses)
+        .where(eq(houses.id, houseId))
+        .for("key share");
+      if (!house)
+        throw new APIError({ message: "House not found.", statusCode: 404 });
+      return tx
+        .insert(controllerDevices)
+        .values({
+          id,
+          houseId,
+          name,
+          createdBy: userId,
+          apiKeyHash: hashControllerKey(apiKey),
+          apiKeyLastFour: apiKey.slice(-4),
+        })
+        .returning({
+          id: controllerDevices.id,
+          name: controllerDevices.name,
+          houseId: controllerDevices.houseId,
+        });
+    }),
   );
-  if (error) throw new APIError({ message: "Unable to add the controller." });
+  if (error)
+    throw error instanceof APIError
+      ? error
+      : new APIError({ message: "Unable to add the controller." });
   return { controllerDevice: data[0], apiKey };
 };
 export const changeControllerKey = async (

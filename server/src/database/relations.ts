@@ -30,6 +30,10 @@ export const relations = defineRelations(schema, (r) => ({
   },
 
   controllerDevices: {
+    devices: r.many.devices({
+      from: r.controllerDevices.id,
+      to: r.devices.controllerDeviceId,
+    }),
     house: r.one.houses({
       from: r.controllerDevices.houseId,
       to: r.houses.id,

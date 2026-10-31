@@ -78,7 +78,7 @@ const Settings = () => {
   const queryClient = useQueryClient();
 
   const controllerUrl = config?.tunnel?.hostname
-    ? `https://${config.tunnel.hostname}`
+    ? config.tunnel.hostname
     : null;
   const isConfigured = Boolean(
     config?.house?.name && config?.controllerDevice?.name && controllerUrl,
@@ -135,11 +135,7 @@ const Settings = () => {
       option: SettingOption.Observability,
       label: "Request history",
       iconLeft: (
-        <MaterialIcons
-          name="timeline"
-          size={20}
-          color={theme.colors.success}
-        />
+        <MaterialIcons name="timeline" size={20} color={theme.colors.success} />
       ),
       iconRight: (
         <MaterialIcons name="keyboard-arrow-right" size={24} color="grey" />
@@ -398,60 +394,60 @@ const Settings = () => {
               }}
             />
 
-              <View
-                style={{
-                  flexDirection: "row",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  gap: 12,
-                }}
-              >
-                {isInitialHealthLoading ? (
-                  <>
-                    <LoadingSkeleton height={13} width="37%" />
-                    <LoadingSkeleton height={26} width={82} borderRadius={99} />
-                  </>
-                ) : (
-                  <>
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
+              }}
+            >
+              {isInitialHealthLoading ? (
+                <>
+                  <LoadingSkeleton height={13} width="37%" />
+                  <LoadingSkeleton height={26} width={82} borderRadius={99} />
+                </>
+              ) : (
+                <>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 9,
+                    }}
+                  >
                     <View
                       style={{
-                        flexDirection: "row",
-                        alignItems: "center",
-                        gap: 9,
+                        width: 9,
+                        height: 9,
+                        borderRadius: 5,
+                        backgroundColor: healthColor,
                       }}
-                    >
-                      <View
-                        style={{
-                          width: 9,
-                          height: 9,
-                          borderRadius: 5,
-                          backgroundColor: healthColor,
-                        }}
-                      />
-                      <Text style={{ color: theme.colors.grey2, fontSize: 13 }}>
-                        {isConfigured ? "Controller API" : "Controller setup"}
-                      </Text>
-                    </View>
-                    <View
+                    />
+                    <Text style={{ color: theme.colors.grey2, fontSize: 13 }}>
+                      {isConfigured ? "Controller API" : "Controller setup"}
+                    </Text>
+                  </View>
+                  <View
+                    style={{
+                      backgroundColor: `${healthColor}1F`,
+                      paddingHorizontal: 11,
+                      paddingVertical: 6,
+                      borderRadius: 99,
+                    }}
+                  >
+                    <Text
                       style={{
-                        backgroundColor: `${healthColor}1F`,
-                        paddingHorizontal: 11,
-                        paddingVertical: 6,
-                        borderRadius: 99,
+                        color: healthColor,
+                        fontSize: 12,
+                        fontFamily: "Lexend_600SemiBold",
                       }}
                     >
-                      <Text
-                        style={{
-                          color: healthColor,
-                          fontSize: 12,
-                          fontFamily: "Lexend_600SemiBold",
-                        }}
-                      >
-                        {healthStatus}
-                      </Text>
-                    </View>
-                  </>
-                )}
+                      {healthStatus}
+                    </Text>
+                  </View>
+                </>
+              )}
             </View>
 
             {isInitialHealthLoading ? (
@@ -497,7 +493,9 @@ const Settings = () => {
         </View>
 
         <View style={{ gap: 8 }}>
-          <Button type="outline" onPress={() => router.push("/house-login")}>Houses & controllers</Button>
+          <Button type="outline" onPress={() => router.push("/house-login")}>
+            Houses & controllers
+          </Button>
           <Text
             style={{
               color: theme.colors.grey2,

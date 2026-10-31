@@ -1,6 +1,6 @@
 # Repository instructions for agents
 
-Follow the conventions already used in this repository. Before editing a component, read its local instructions (`server/AGENTS.md` or `mobile/AGENTS.md`) and inspect nearby implementations of the same kind. Keep changes consistent with those examples.
+Follow the conventions already used in this repository. Before editing a component, read its local instructions (`controller/AGENTS.md`, `server/AGENTS.md`, or `mobile/AGENTS.md`) and inspect nearby implementations of the same kind. Keep changes consistent with those examples.
 
 ## Server API conventions
 

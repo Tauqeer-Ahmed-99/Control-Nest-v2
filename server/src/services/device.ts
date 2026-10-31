@@ -313,7 +313,7 @@ export const switchDevice = async (
   if (!hostname) {
     throw new APIError({ message: "Tunnel hostname not found." });
   }
-  const controllerUrl = `https://${hostname}`;
+  const controllerUrl = hostname;
 
   const updatedDevice = await measureRequestTiming(
     "switch-transaction-total",

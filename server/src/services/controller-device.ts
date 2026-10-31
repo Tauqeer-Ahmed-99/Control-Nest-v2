@@ -170,7 +170,7 @@ const getControllerDeviceUrlById = async (controllerDeviceId: string) => {
     });
   }
 
-  return `https://${hostname}`;
+  return hostname;
 };
 
 const getControllerDeviceUrlByDeviceId = async (
@@ -193,7 +193,7 @@ const getControllerDeviceUrlByDeviceId = async (
     throw new APIError({ message: "Tunnel hostname not found." });
   }
 
-  return `https://${hostname}`;
+  return hostname;
 };
 
 export const checkControllerDeviceHealth = async ({

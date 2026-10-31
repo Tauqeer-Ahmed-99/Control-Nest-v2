@@ -4,6 +4,7 @@ import {
   CreateControllerSchema,
   ControllerKeyActionSchema,
   HouseIdSchema,
+  ControllerIdSchema,
 } from "@/models/onboarding";
 import { authenticate } from "@/services/auth";
 import {
@@ -13,6 +14,23 @@ import {
 } from "@/services/onboarding";
 import { validate } from "@/services/validation";
 import { withRequestObservability } from "@/services/request-observability";
+import { removeController } from "@/services/resource-removal";
+
+export const DELETE = withRequestObservability(async (req: NextRequest) => {
+  try {
+    const { user } = await authenticate(req);
+    const params = validate({
+      schema: ControllerIdSchema,
+      object: await req.json(),
+    });
+    return APIResponse.fromData({
+      data: await removeController(params, user.id),
+      message: "Controller removed.",
+    });
+  } catch (error) {
+    return APIResponse.fromError(error);
+  }
+});
 export const GET = withRequestObservability(async (req: NextRequest) => {
   try {
     const { user } = await authenticate(req);

@@ -18,7 +18,7 @@ const useRemoteUrl = (
     }
 
     if (controllerConfig) {
-      return `https://${controllerConfig.tunnel.hostname}`;
+      return controllerConfig.tunnel.hostname;
     }
 
     return null;

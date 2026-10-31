@@ -47,6 +47,33 @@ export const cleanupControllerTunnel = async (
   await tryCatch(deleteTunnel({ tunnelId }));
 };
 
+// Keep the database record on failure so removal can be retried. A previous
+// attempt may already have removed either resource, so 404 is a success here.
+export const removeControllerTunnel = async (
+  tunnelId: string,
+  dnsRecordId: string,
+) => {
+  const tunnel = await tryCatch(deleteTunnel({ tunnelId }));
+  if (tunnel.error && !(tunnel.error instanceof Cloudflare.NotFoundError)) {
+    throw new APIError({
+      message:
+        "Unable to remove the controller tunnel. Disconnect the Pi and try again.",
+      statusCode: 502,
+    });
+  }
+  const dns = await tryCatch(
+    cloudflare.dns.records.delete(dnsRecordId, {
+      zone_id: env.variables.CLOUDFLARE_ZONE_ID,
+    }),
+  );
+  if (dns.error && !(dns.error instanceof Cloudflare.NotFoundError)) {
+    throw new APIError({
+      message: "Unable to remove the controller DNS record. Please try again.",
+      statusCode: 502,
+    });
+  }
+};
+
 const publishAppService = async ({
   tunnelName,
   cloudflareTunnel,
@@ -57,7 +84,7 @@ const publishAppService = async ({
   hostname: string;
   configuration: Cloudflare.ZeroTrust.Tunnels.Cloudflared.Configurations.ConfigurationUpdateResponse;
 }> => {
-  const hostname = `${tunnelName}.nmt-solutions.in`;
+  const hostname = `https://${tunnelName}.nmt-solutions.in`;
 
   const configuration =
     await cloudflare.zeroTrust.tunnels.cloudflared.configurations.update(
