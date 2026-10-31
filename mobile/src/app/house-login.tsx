@@ -720,6 +720,7 @@ const useStyles = () => {
       justifyContent: "center",
       alignItems: "center",
       gap: 4,
+      marginTop: 12,
     },
     controllerDetailsForm: {
       width: "100%",
@@ -733,13 +734,13 @@ const useStyles = () => {
       paddingHorizontal: 0,
     },
     continueButtonContainer: {
-      width: "100%",
-      borderRadius: 14,
+      alignSelf: "center",
+      borderRadius: 25,
       marginBottom: 0,
     },
     button: {
-      width: "100%",
-      borderRadius: 14,
+      width: 190,
+      borderRadius: 25,
       backgroundColor: success,
     },
     passwordButton: {
