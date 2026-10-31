@@ -5,7 +5,7 @@ import {
 } from "@/hooks/use-house-member-mutations";
 import useHouseMembers from "@/hooks/use-house-members";
 import useSearchHouseUsers from "@/hooks/use-search-house-users";
-import { useHouseId } from "@/hooks/use-house";
+import useHouse, { useHouseId } from "@/hooks/use-house";
 import {
   HouseMemberProfile,
   HouseMemberMutationResponse,
@@ -14,20 +14,21 @@ import Feather from "@expo/vector-icons/Feather";
 import { useUser } from "@clerk/expo";
 import { BottomSheet, Button, Input, Text, useTheme } from "@rneui/themed";
 import React, { useEffect, useState } from "react";
+import { Alert, ScrollView, View } from "react-native";
+import LoadingSkeleton from "@/components/loading-skeleton";
 import {
-  ActivityIndicator,
-  Alert,
-  ScrollView,
-  View,
-} from "react-native";
+  HouseMemberListSkeleton,
+  SearchResultsSkeleton,
+} from "@/components/loading-placeholders";
 
 const getUserName = (member: HouseMemberProfile) => {
+  const fullName = member.fullName?.trim();
   const name = [member.firstName, member.lastName]
     .filter(Boolean)
     .join(" ")
     .trim();
 
-  return name || member.username || member.emailAddress || member.id;
+  return fullName || name || member.username || member.emailAddress || member.id;
 };
 
 type PendingHouseMemberAction =
@@ -49,6 +50,7 @@ const HouseMembers = () => {
   const { theme } = useTheme();
   const { user } = useUser();
   const houseId = useHouseId();
+  const houseQuery = useHouse();
   const membersQuery = useHouseMembers();
   const addMember = useAddHouseMember();
   const updateMember = useUpdateHouseMember();
@@ -145,8 +147,8 @@ const HouseMembers = () => {
         key={member.id}
         style={{
           backgroundColor: theme.colors.secondary,
-          borderColor: theme.colors.grey3,
-          borderRadius: 16,
+          borderColor: theme.colors.greyOutline,
+          borderRadius: 18,
           borderWidth: 1,
           gap: 12,
           padding: 16,
@@ -171,7 +173,7 @@ const HouseMembers = () => {
           </View>
           <View style={{ flex: 1, gap: 3 }}>
             <Text
-              style={{ fontFamily: "Lexend_500Medium", fontSize: 15 }}
+              style={{ fontFamily: "Lexend_600SemiBold", fontSize: 16 }}
               numberOfLines={1}
             >
               {name}
@@ -190,7 +192,7 @@ const HouseMembers = () => {
               backgroundColor: theme.colors.primary,
               borderColor: isHouseAdmin
                 ? theme.colors.success
-                : theme.colors.grey3,
+                : theme.colors.greyOutline,
               borderRadius: 99,
               borderWidth: 1,
               paddingHorizontal: 10,
@@ -212,7 +214,7 @@ const HouseMembers = () => {
         {allowManagement ? (
           <View
             style={{
-              borderTopColor: theme.colors.grey3,
+              borderTopColor: theme.colors.greyOutline,
               borderTopWidth: 1,
               flexDirection: "row",
               flexWrap: "wrap",
@@ -257,13 +259,11 @@ const HouseMembers = () => {
     );
   };
 
-  const isLoading = membersQuery.isLoading;
-
   return (
     <>
       <ScrollView
         style={{ flex: 1, backgroundColor: theme.colors.primary }}
-        contentContainerStyle={{ padding: 16, paddingBottom: 112, gap: 20 }}
+        contentContainerStyle={{ padding: 16, paddingBottom: 132, gap: 20 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
@@ -304,14 +304,16 @@ const HouseMembers = () => {
               containerStyle={{ paddingHorizontal: 0, paddingBottom: 0 }}
               inputContainerStyle={{
                 backgroundColor: theme.colors.secondary,
-                borderBottomWidth: 0,
-                borderRadius: 12,
+                borderBottomWidth: 1,
+                borderWidth: 1,
+                borderColor: theme.colors.grey5,
+                borderRadius: 14,
                 paddingHorizontal: 12,
               }}
               inputStyle={{
-                color: theme.colors.white,
+                color: theme.colors.black,
                 fontFamily: "Lexend_400Regular",
-                fontSize: 14,
+                fontSize: 16,
               }}
             />
 
@@ -327,8 +329,8 @@ const HouseMembers = () => {
                 >
                   SEARCH RESULTS
                 </Text>
-                {searchUsersQuery.isFetching ? (
-                  <ActivityIndicator color={theme.colors.success} />
+                {searchUsersQuery.isLoading ? (
+                  <SearchResultsSkeleton />
                 ) : searchError ? (
                   <Text style={{ color: theme.colors.error }}>{searchError}</Text>
                 ) : searchResults.length > 0 ? (
@@ -338,6 +340,8 @@ const HouseMembers = () => {
                       style={{
                         alignItems: "center",
                         backgroundColor: theme.colors.secondary,
+                        borderWidth: 1,
+                        borderColor: theme.colors.grey5,
                         borderRadius: 14,
                         flexDirection: "row",
                         gap: 12,
@@ -415,17 +419,21 @@ const HouseMembers = () => {
             >
               HOUSE MEMBERS
             </Text>
-            <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
-              {members.length}
-            </Text>
+            {houseQuery.isLoading || membersQuery.isLoading ? (
+              <LoadingSkeleton height={12} width={20} borderRadius={6} />
+            ) : (
+              <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
+                {members.length}
+              </Text>
+            )}
           </View>
 
-          {!houseId ? (
+          {houseQuery.isLoading || membersQuery.isLoading ? (
+            <HouseMemberListSkeleton count={3} />
+          ) : !houseId ? (
             <Text style={{ color: theme.colors.grey2, fontSize: 13 }}>
               Connect to a house to view its members.
             </Text>
-          ) : isLoading ? (
-            <ActivityIndicator color={theme.colors.success} />
           ) : memberError ? (
             <Text style={{ color: theme.colors.error }}>{memberError}</Text>
           ) : members.length > 0 ? (

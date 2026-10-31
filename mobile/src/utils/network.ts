@@ -1,10 +1,16 @@
-export interface ApiConfig {
+export interface ApiConfig<T = unknown> {
   baseUrl?: string;
   searchParams?: { [key: string]: any };
   body?: BodyInit;
   method?: HTTPMethod;
   headers?: HeadersInit;
-  queryConfig?: { enabled?: boolean; staleTime?: number };
+  queryConfig?: {
+    enabled?: boolean;
+    staleTime?: number;
+    placeholderData?:
+      | T
+      | ((previousData: T | undefined) => T | undefined);
+  };
 }
 
 export enum HTTPMethod {
@@ -37,7 +43,11 @@ export const ExpectedHTTPStatuses: HTTPStatus[] = [
   HTTPStatus.ServiceUnavailable,
 ];
 
-const request = (baseUrl: string, url: string, config?: ApiConfig) => {
+const request = <T = unknown>(
+  baseUrl: string,
+  url: string,
+  config?: ApiConfig<T>,
+) => {
   const fullUrl = new URL(url, baseUrl);
 
   const { searchParams, body, method = HTTPMethod.GET, headers } = config ?? {};

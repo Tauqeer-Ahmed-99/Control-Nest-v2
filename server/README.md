@@ -1,5 +1,13 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Existing database pin migration
+
+Before deploying this schema to an existing database, run
+`src/database/migrations/convert-device-pin-number-to-header-pin.sql` once
+against that database. It moves each stored BCM GPIO value into `gpioPinNumber`
+and converts `pinNumber` to the physical Raspberry Pi header position. New,
+empty databases can use `npm run db-push` as usual.
+
 ## Getting Started
 
 First, run the development server:

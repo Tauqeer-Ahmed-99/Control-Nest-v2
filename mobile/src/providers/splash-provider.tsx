@@ -10,11 +10,8 @@ const SplashProvider = ({
   children,
 }: { isFontsLoaded: boolean } & PropsWithChildren) => {
   const { isLoaded: isAuthLoaded } = useAuth();
-  const {
-    theme: {
-      colors: { primary },
-    },
-  } = useTheme();
+  const { theme } = useTheme();
+  const { primary } = theme.colors;
   const [dots, setDots] = useState("");
 
   useEffect(() => {
@@ -41,7 +38,10 @@ const SplashProvider = ({
           gap: 16,
         }}
       >
-        <StatusBar translucent />
+        <StatusBar
+          translucent
+          barStyle={theme.mode === "dark" ? "light-content" : "dark-content"}
+        />
         <NMTLogo height={120} width={120} />
         <Text>Initializing {dots}</Text>
       </View>

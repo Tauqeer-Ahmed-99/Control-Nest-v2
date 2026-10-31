@@ -16,6 +16,7 @@ export const devices = pgTable("devices", {
     .references(() => rooms.id),
   name: text("name").notNull(),
   pinNumber: integer("pinNumber").notNull(),
+  gpioPinNumber: integer("gpioPinNumber").notNull(),
   status: boolean("status").notNull().default(false),
   isDefault: boolean("isDefault").notNull().default(false),
   isScheduled: boolean("isScheduled").notNull().default(false),

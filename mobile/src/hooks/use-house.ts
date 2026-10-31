@@ -83,10 +83,12 @@ export const useHouseId = (): string | null => {
 // };
 
 const useHouse = () => {
-  const houseId = useHouseId();
+  const { data: controllerConfig, isLoading: isLoadingControllerConfig } =
+    useGetMobileStorageData<ControllerConfig>(CONTROLLER_DEVICE_CONFIG);
+  const houseId = controllerConfig?.house?.id ?? null;
   const { isSignedIn } = useUser();
 
-  return useApiQuery<GetHouseResponse>(ApiRoutes.UserHouse, {
+  const houseQuery = useApiQuery<GetHouseResponse>(ApiRoutes.UserHouse, {
     searchParams: {
       houseId: houseId ?? "",
     },
@@ -94,6 +96,11 @@ const useHouse = () => {
       enabled: Boolean(houseId && isSignedIn),
     },
   });
+
+  return {
+    ...houseQuery,
+    isLoading: isLoadingControllerConfig || houseQuery.isLoading,
+  };
 };
 
 export const useHouseData = () => {

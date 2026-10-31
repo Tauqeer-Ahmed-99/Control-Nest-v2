@@ -12,6 +12,7 @@ const useSearchHouseUsers = (query: string, enabled = true) => {
     queryConfig: {
       enabled: Boolean(houseId && searchQuery && enabled),
       staleTime: 1000 * 30,
+      placeholderData: (previousData) => previousData,
     },
   });
 };

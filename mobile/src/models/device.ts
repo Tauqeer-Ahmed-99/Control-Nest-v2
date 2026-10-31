@@ -5,6 +5,7 @@ export type Device = {
   roomId: string;
   name: string;
   pinNumber: number;
+  gpioPinNumber: number;
   status: boolean;
   isDefault: boolean;
   isScheduled: boolean;

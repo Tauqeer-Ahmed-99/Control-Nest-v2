@@ -8,6 +8,7 @@ export type HouseMember = {
 
 export type HouseMemberProfile = {
   id: string;
+  fullName: string | null;
   firstName: string | null;
   lastName: string | null;
   username: string | null;

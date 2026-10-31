@@ -63,6 +63,7 @@ export const searchHouseUsers = async (
 
   return users.data.map((user) => ({
     id: user.id,
+    fullName: user.fullName,
     firstName: user.firstName,
     lastName: user.lastName,
     username: user.username,
@@ -104,6 +105,7 @@ export const getHouseMembers = async (
 
     return {
       id: memberUserId,
+      fullName: user?.fullName ?? null,
       firstName: user?.firstName ?? null,
       lastName: user?.lastName ?? null,
       username: user?.username ?? null,

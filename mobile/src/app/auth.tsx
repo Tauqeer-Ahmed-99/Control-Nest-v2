@@ -5,7 +5,13 @@ import SignUp from "@/components/signup";
 import { Button, useTheme } from "@rneui/themed";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import { useState } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import {
+  KeyboardAvoidingView,
+  Platform,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 
 const Steps = ({
   activeStep,
@@ -40,24 +46,31 @@ const Steps = ({
 
 export default function Auth() {
   const [step, setStep] = useState(0);
+  const { theme } = useTheme();
   const styles = useStyles();
 
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <View style={[styles.box, styles.shadow]}>
-        <ExpoStatusBar animated />
+        <ExpoStatusBar
+          style={theme.mode === "dark" ? "light" : "dark"}
+          animated
+        />
         <NMTLogo height={120} width={120} />
         <NMTTextLogo />
         <Text style={styles.heading}>Home Automation System</Text>
       </View>
-      <View style={[styles.bottomSheet, step !== 0 && { height: "auto" }]}>
+      <View style={[styles.bottomSheet, step !== 0 && styles.authSheet]}>
         <Steps
           activeStep={step}
           nextStep={() => setStep((step) => step + 1)}
           prevStep={() => setStep((step) => step - 1)}
         />
       </View>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -66,7 +79,7 @@ const useStyles = () => {
 
   return StyleSheet.create({
     container: {
-      height: "100%",
+      flex: 1,
       backgroundColor: theme.colors.primary,
       alignItems: "center",
       justifyContent: "center",
@@ -83,16 +96,17 @@ const useStyles = () => {
     },
     shadow: {
       elevation: 100,
-      shadowColor: "#3e31ab",
+      shadowColor: theme.colors.success,
     },
     heading: {
-      color: theme.colors.white,
+      color: theme.colors.black,
       fontSize: 18,
       fontFamily: "Lexend_400Regular",
     },
     bottomSheet: {
       backgroundColor: theme.colors.secondary,
       height: 120,
+      maxHeight: "90%",
       width: "100%",
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
@@ -101,16 +115,23 @@ const useStyles = () => {
       justifyContent: "center",
       alignItems: "center",
     },
+    authSheet: {
+      height: "auto",
+      alignItems: "stretch",
+      justifyContent: "flex-start",
+    },
     button: {
       width: 240,
       borderRadius: 25,
-      backgroundColor: "#3e31ab",
+      backgroundColor: theme.colors.success,
     },
     buttonContainer: {
-      elevation: 20,
       borderRadius: 25,
-      shadowColor: "#3e31ab",
+      shadowColor: theme.colors.success,
     },
-    buttonTitle: { fontFamily: "Lexend_400Regular" },
+    buttonTitle: {
+      fontFamily: "Lexend_600SemiBold",
+      color: theme.mode === "dark" ? "#10201A" : "#FFFFFF",
+    },
   });
 };

@@ -8,28 +8,17 @@ const Icon = ({ name }: { name: string }) => {
   return (
     <View
       style={{
-        height: 60,
-        width: 60,
-        borderRadius: 30,
-        backgroundColor: "rgba(236, 236, 236, 0.5)",
+        height: 50,
+        width: 50,
+        borderRadius: 16,
+        backgroundColor: `${color}1A`,
+        borderWidth: 1,
+        borderColor: `${color}40`,
         justifyContent: "center",
         alignItems: "center",
-        elevation: 50,
-        shadowColor: color,
       }}
     >
-      <View
-        style={{
-          height: 50,
-          width: 50,
-          borderRadius: 25,
-          backgroundColor: theme.colors.primary,
-          justifyContent: "center",
-          alignItems: "center",
-        }}
-      >
-        {icon}
-      </View>
+      {icon}
     </View>
   );
 };

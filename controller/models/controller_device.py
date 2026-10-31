@@ -8,6 +8,7 @@ class DeviceResponse(BaseModel):
     name: str
     status: bool
     pinNumber: int
+    gpioPinNumber: int
     isDefault: bool
     isScheduled: bool
     daysScheduled: str | None

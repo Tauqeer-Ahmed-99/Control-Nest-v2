@@ -1,10 +1,11 @@
 import { getRandomItem } from "@/utils/helpers";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
-import { Text } from "@rneui/themed";
+import { Text, useTheme } from "@rneui/themed";
 import { useEffect, useMemo, useState } from "react";
 import { View } from "react-native";
 
 const useWeatherIcons = (keyword: string) => {
+  const { theme } = useTheme();
   const [icon, setIcon] = useState<React.ReactNode>();
   const weatherIcons: { keywords: string; icon: React.ReactNode }[] = useMemo(
     () => [
@@ -14,7 +15,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-cloudy"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -24,7 +25,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-cloudy-alert"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -34,7 +35,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-fog"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -44,7 +45,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-fog"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -54,7 +55,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-lightning"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -64,7 +65,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-lightning-rainy"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -74,7 +75,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-night"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -84,7 +85,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-night-partly-cloudy"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -94,7 +95,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-partly-cloudy"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -104,7 +105,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-partly-lightning"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -114,7 +115,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-partly-rainy"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -124,7 +125,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-partly-snowy"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -134,7 +135,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-rainy"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -144,7 +145,7 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-sunny"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
@@ -154,12 +155,12 @@ const useWeatherIcons = (keyword: string) => {
           <MaterialCommunityIcons
             name="weather-windy"
             size={24}
-            color="#6BE7FF"
+            color={theme.colors.success}
           />
         ),
       },
     ],
-    [],
+    [theme.colors.success],
   );
 
   useEffect(() => {
@@ -176,12 +177,20 @@ const useWeatherIcons = (keyword: string) => {
         setIcon(getRandomItem(icons).icon);
       }
     }
-  }, [keyword]);
+  }, [keyword, weatherIcons]);
 
   return (
     <View style={{ justifyContent: "center", alignItems: "center" }}>
       {icon}
-      <Text style={{ color: "grey", textAlign: "center", fontSize: 8 }}>
+      <Text
+        numberOfLines={1}
+        style={{
+          color: theme.colors.grey2,
+          textAlign: "center",
+          fontSize: 11,
+          lineHeight: 13,
+        }}
+      >
         {keyword}
       </Text>
     </View>

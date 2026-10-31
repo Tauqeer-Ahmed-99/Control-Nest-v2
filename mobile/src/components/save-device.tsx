@@ -54,6 +54,7 @@ const SaveDevice = ({
         deviceId: device?.id!,
         deviceName: deviceNameRef.current,
         pinNumber: device?.pinNumber,
+        gpioPinNumber: device?.gpioPinNumber,
         status: device?.status,
         isDefault: device?.isDefault,
         isScheduled: device?.isScheduled,

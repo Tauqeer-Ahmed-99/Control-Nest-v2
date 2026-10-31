@@ -14,6 +14,7 @@ export const getGPIOPins = async (
   }
 
   const house = await database.query.houses.findFirst({
+    where: { id: houseId },
     with: { rooms: { with: { devices: true } } },
   });
 
@@ -27,7 +28,7 @@ export const getGPIOPins = async (
 
   const availablePins = pinHeaderConfig.filter(
     (p) =>
-      p.type === HeaderPinType.GPIO && !usedPins.includes(p.gpioPinNumber!),
+      p.type === HeaderPinType.GPIO && !usedPins.includes(p.headerPinNumber),
   );
 
   return availablePins;

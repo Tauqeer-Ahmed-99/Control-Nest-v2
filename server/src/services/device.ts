@@ -15,11 +15,13 @@ export const createDevice = async (
   {
     roomId,
     pinNumber,
+    gpioPinNumber,
     deviceName,
     wattage,
   }: {
     roomId: string;
     pinNumber: number;
+    gpioPinNumber: number;
     deviceName: string;
     wattage: number;
   },
@@ -35,7 +37,7 @@ export const createDevice = async (
 
   if (existingDevice) {
     throw new APIError({
-      message: "GPIO Pin already in use.",
+      message: "Header pin already in use.",
       statusCode: 400,
     });
   }
@@ -56,6 +58,7 @@ export const createDevice = async (
         name: deviceName,
         roomId,
         pinNumber,
+        gpioPinNumber,
         wattage,
         createdBy: userId,
       })
@@ -81,6 +84,7 @@ export const updateDevice = async (
     deviceId,
     deviceName,
     pinNumber,
+    gpioPinNumber,
     status,
     isDefault,
     isScheduled,
@@ -93,6 +97,7 @@ export const updateDevice = async (
     deviceId: string;
     deviceName?: string;
     pinNumber?: number;
+    gpioPinNumber?: number;
     status?: boolean;
     isDefault?: boolean;
     isScheduled?: boolean;
@@ -122,7 +127,7 @@ export const updateDevice = async (
 
     if (existingDevice && existingDevice.id !== deviceId) {
       throw new APIError({
-        message: "GPIO Pin already in use.",
+        message: "Header pin already in use.",
         statusCode: 400,
       });
     }
@@ -145,6 +150,7 @@ export const updateDevice = async (
       .set({
         name: deviceName,
         pinNumber,
+        gpioPinNumber,
         status: isON,
         isDefault,
         isScheduled,

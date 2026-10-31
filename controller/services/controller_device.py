@@ -49,7 +49,7 @@ class ControllerDevice:
         try:
             for device in self.devices:
                 device.output_device = OutputDevice(
-                    device.pin_number,
+                    device.gpio_pin_number,
                     active_high=False
                 )
                 if device.status:
@@ -63,7 +63,7 @@ class ControllerDevice:
     def add_device(self, device_res: DeviceResponse):
         device = Device(device_res)
         device.output_device = OutputDevice(
-            device.pin_number,
+            device.gpio_pin_number,
             active_high=False
         )
         self.devices.append(device)

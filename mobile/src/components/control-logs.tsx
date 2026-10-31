@@ -1,4 +1,4 @@
-import LoadingSkeleton from "@/components/loading-skeleton";
+import { ControlLogListSkeleton } from "@/components/loading-placeholders";
 import MessageContainer from "@/components/message-container";
 import Tile from "@/components/tile";
 import useClerkUserName from "@/hooks/use-clerk-user-name";
@@ -40,7 +40,7 @@ type ControlLogsPropsType =
 const ControlLogs = ({ logType, houseId, deviceId }: ControlLogsPropsType) => {
   const {
     theme: {
-      colors: { primary, success, grey3 },
+      colors: { primary, success, grey3, black },
     },
   } = useTheme();
 
@@ -116,13 +116,11 @@ const ControlLogs = ({ logType, houseId, deviceId }: ControlLogsPropsType) => {
           flex: 1,
           backgroundColor: primary,
           padding: 16,
-          paddingBottom: 90,
+          paddingBottom: 120,
           gap: 12,
         }}
       >
-        {Array.from({ length: 6 }).map((_, i) => (
-          <LoadingSkeleton key={i} height={80} borderRadius={12} />
-        ))}
+        <ControlLogListSkeleton count={5} />
       </View>
     );
   }
@@ -133,7 +131,7 @@ const ControlLogs = ({ logType, houseId, deviceId }: ControlLogsPropsType) => {
         flex: 1,
         backgroundColor: primary,
         padding: 16,
-        paddingBottom: 90,
+        paddingBottom: 120,
       }}
     >
       {/* Live toggle */}
@@ -143,12 +141,14 @@ const ControlLogs = ({ logType, houseId, deviceId }: ControlLogsPropsType) => {
           setIsLive((prev) => !prev);
         }}
         style={{
+          minHeight: 44,
           flexDirection: "row",
           alignItems: "center",
           gap: 10,
           marginBottom: 12,
           alignSelf: "flex-end",
         }}
+        hitSlop={8}
       >
         {isLive && isFetching && (
           <ActivityIndicator size="small" color={success} />
@@ -180,7 +180,7 @@ const ControlLogs = ({ logType, houseId, deviceId }: ControlLogsPropsType) => {
           renderItem={(logEntry) => (
             <LogItem logType={logType} logEntry={logEntry.item} />
           )}
-          contentContainerStyle={{ gap: 10, paddingBottom: 60 }}
+          contentContainerStyle={{ gap: 10, paddingBottom: 20 }}
           showsVerticalScrollIndicator={false}
         />
       ) : (
@@ -201,21 +201,33 @@ const ControlLogs = ({ logType, houseId, deviceId }: ControlLogsPropsType) => {
           <TouchableOpacity
             disabled={page <= 1}
             onPress={() => goToPage(page - 1)}
-            style={{ opacity: page <= 1 ? 0.3 : 1 }}
+            style={{
+              width: 44,
+              height: 44,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: page <= 1 ? 0.3 : 1,
+            }}
           >
-            <MaterialIcons name="chevron-left" size={28} color="#fff" />
+            <MaterialIcons name="chevron-left" size={28} color={black} />
           </TouchableOpacity>
 
-          <Text style={{ fontSize: 14, color: "#fff" }}>
+          <Text style={{ fontSize: 14, color: black }}>
             {page} / {totalPages}
           </Text>
 
           <TouchableOpacity
             disabled={page >= totalPages}
             onPress={() => goToPage(page + 1)}
-            style={{ opacity: page >= totalPages ? 0.3 : 1 }}
+            style={{
+              width: 44,
+              height: 44,
+              alignItems: "center",
+              justifyContent: "center",
+              opacity: page >= totalPages ? 0.3 : 1,
+            }}
           >
-            <MaterialIcons name="chevron-right" size={28} color="#fff" />
+            <MaterialIcons name="chevron-right" size={28} color={black} />
           </TouchableOpacity>
         </View>
       )}
@@ -234,7 +246,7 @@ const LogItem = ({
 }) => {
   const {
     theme: {
-      colors: { success, error, grey3 },
+      colors: { success, error, grey2 },
     },
   } = useTheme();
 
@@ -276,7 +288,6 @@ const LogItem = ({
             justifyContent: "space-between",
           }}
         >
-          <Text>{}</Text>
           <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
             <View
               style={{
@@ -295,7 +306,7 @@ const LogItem = ({
           <Text
             style={{
               fontSize: 11,
-              color: grey3,
+              color: grey2,
               fontFamily: "Lexend_300Light",
             }}
           >
@@ -311,10 +322,10 @@ const LogItem = ({
             alignItems: "center",
           }}
         >
-          <Text style={{ fontSize: 12, color: grey3 }}>
+          <Text style={{ fontSize: 12, color: grey2 }}>
             {resolveUserName(logEntry.createdBy)}
           </Text>
-          <Text style={{ fontSize: 11, color: grey3 }}>
+          <Text style={{ fontSize: 11, color: grey2 }}>
             {formatDate(logEntry.createdAt)}
           </Text>
         </View>

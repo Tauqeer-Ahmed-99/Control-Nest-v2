@@ -41,7 +41,7 @@ function Grid<T>({
           <View
             key={index}
             style={{
-              marginBottom: rowGap,
+              marginBottom: rowGap ?? 16,
               flexDirection: "row",
               justifyContent: "space-between",
               alignItems: "center",

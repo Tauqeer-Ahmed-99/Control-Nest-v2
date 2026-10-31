@@ -1,9 +1,7 @@
 import { useTheme } from "@rneui/themed";
 import { useWindowDimensions, View } from "react-native";
+import { Text } from "@rneui/themed";
 import Switch from "./switch";
-
-const GAP = 30;
-const PADDING_HORIZONTAL = 12 * 2;
 
 function Card<T>({
   item,
@@ -19,34 +17,42 @@ function Card<T>({
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
 
-  const cardWidth = (width - GAP - PADDING_HORIZONTAL) / 2;
+  const cardWidth = (width - 52) / 2;
 
   return (
     <View
       style={{
-        height: 200,
+        height: 188,
         width: cardWidth,
         backgroundColor: theme.colors.secondary,
-        borderRadius: 12,
-        padding: 12,
-        position: "relative",
+        borderColor: theme.colors.grey5,
+        borderWidth: 1,
+        borderRadius: 20,
+        paddingHorizontal: 14,
+        paddingTop: 14,
+        paddingBottom: 9,
       }}
     >
-      {render(item)}
+      <View style={{ flex: 1, paddingBottom: 12 }}>{render(item)}</View>
       <View
         style={{
-          height: 45,
-          width: 80,
-          backgroundColor: theme.colors.primary,
-          justifyContent: "center",
+          height: 48,
+          flexDirection: "row",
           alignItems: "center",
-          borderRadius: 20,
-          position: "absolute",
-          left: "50%",
-          bottom: -20,
-          transform: [{ translateX: -28.5 }],
+          justifyContent: "space-between",
+          borderTopWidth: 1,
+          borderTopColor: theme.colors.grey5,
         }}
       >
+        <Text
+          style={{
+            color: theme.colors.grey2,
+            fontSize: 13,
+            fontFamily: "Lexend_500Medium",
+          }}
+        >
+          Power
+        </Text>
         <Switch value={value} onChange={onChange} />
       </View>
     </View>

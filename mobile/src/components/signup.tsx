@@ -3,20 +3,25 @@ import { useSignUp } from "@clerk/expo";
 import Feather from "@expo/vector-icons/Feather";
 import { Button, Text, useTheme } from "@rneui/themed";
 import React, { useCallback, useState } from "react";
-import { StyleSheet, TouchableOpacity, View } from "react-native";
+import {
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import InputField from "./input-field";
 
 const SignUp = ({ prevStep }: { prevStep: () => void }) => {
-  const {
-    theme: {
-      colors: { grey3 },
-    },
-  } = useTheme();
+  const { theme } = useTheme();
+  const { grey3 } = theme.colors;
 
   const { signUp } = useSignUp();
 
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [emailAddress, setEmailAddress] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [code, setCode] = useState("");
@@ -26,7 +31,12 @@ const SignUp = ({ prevStep }: { prevStep: () => void }) => {
     setIsLoading(true);
 
     const { data, error } = await tryCatch(
-      signUp.password({ emailAddress, password }),
+      signUp.password({
+        emailAddress: emailAddress.trim(),
+        password,
+        firstName: firstName.trim() || undefined,
+        lastName: lastName.trim() || undefined,
+      }),
     );
 
     if (error) {
@@ -59,7 +69,7 @@ const SignUp = ({ prevStep }: { prevStep: () => void }) => {
 
     setIsVerifying(true);
     setIsLoading(false);
-  }, [emailAddress, password, signUp]);
+  }, [emailAddress, firstName, lastName, password, signUp]);
 
   const onPressVerify = async () => {
     setIsLoading(true);
@@ -87,100 +97,188 @@ const SignUp = ({ prevStep }: { prevStep: () => void }) => {
   };
 
   return (
-    <View style={{ width: "100%", padding: 32, justifyContent: "center" }}>
-      <View style={styles.header}>
-        <Text
-          style={{
-            fontFamily: "Lexend_600SemiBold",
-            fontSize: 24,
-          }}
+    <ScrollView
+      style={{ width: "100%", flexShrink: 1 }}
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.form}>
+        <View style={styles.header}>
+          <Text
+            style={{
+              fontFamily: "Lexend_600SemiBold",
+              fontSize: 24,
+            }}
+          >
+            Sign Up
+          </Text>
+          <TouchableOpacity disabled={isLoading} onPress={prevStep}>
+            <Feather name="arrow-left" size={24} color={grey3} />
+          </TouchableOpacity>
+        </View>
+
+        {!isVerifying && (
+          <>
+            <View style={styles.nameFields}>
+              <InputField
+                containerStyle={styles.nameField}
+                label="First name"
+                value={firstName}
+                placeholder="First name"
+                autoCapitalize="words"
+                onChangeText={setFirstName}
+                disabled={isLoading}
+              />
+              <InputField
+                containerStyle={styles.nameField}
+                label="Last name"
+                value={lastName}
+                placeholder="Last name"
+                autoCapitalize="words"
+                onChangeText={setLastName}
+                disabled={isLoading}
+              />
+            </View>
+            <InputField
+              containerStyle={styles.inputField}
+              label="Email address"
+              autoCapitalize="none"
+              value={emailAddress}
+              placeholder="you@example.com"
+              keyboardType="email-address"
+              onChangeText={(email) => setEmailAddress(email)}
+              disabled={isLoading}
+            />
+            <InputField
+              containerStyle={styles.inputField}
+              label="Password"
+              value={password}
+              placeholder="Enter password"
+              autoCapitalize="none"
+              secureTextEntry={!isPasswordVisible}
+              rightIcon={
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isPasswordVisible ? "Hide password" : "Show password"
+                  }
+                  onPress={() =>
+                    setIsPasswordVisible((isVisible) => !isVisible)
+                  }
+                  style={{
+                    width: 44,
+                    height: 44,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Feather
+                    name={isPasswordVisible ? "eye-off" : "eye"}
+                    size={20}
+                    color={theme.colors.grey2}
+                  />
+                </TouchableOpacity>
+              }
+              onChangeText={(password) => setPassword(password)}
+              disabled={isLoading}
+            />
+            <Button
+              title="Sign Up"
+              color="success"
+              loading={isLoading}
+              buttonStyle={styles.button}
+              containerStyle={styles.buttonContainer}
+              titleStyle={[
+                styles.buttonTitle,
+                { color: theme.mode === "dark" ? "#10201A" : "#FFFFFF" },
+              ]}
+              onPress={!isLoading ? onSignUpPress : undefined}
+            />
+          </>
+        )}
+
+        {isVerifying && (
+          <>
+            <InputField
+              containerStyle={styles.inputField}
+              label="Verification code"
+              value={code}
+              placeholder="Enter code"
+              onChangeText={(code) => setCode(code)}
+              disabled={isLoading}
+            />
+            <Button
+              title="Verify Email"
+              color="success"
+              buttonStyle={styles.button}
+              containerStyle={styles.buttonContainer}
+              titleStyle={[
+                styles.buttonTitle,
+                { color: theme.mode === "dark" ? "#10201A" : "#FFFFFF" },
+              ]}
+              onPress={!isLoading ? onPressVerify : undefined}
+            />
+          </>
+        )}
+
+        {error && (
+          <Text
+            accessibilityRole="alert"
+            style={{
+              textAlign: "center",
+              color: theme.colors.error,
+              marginTop: 16,
+            }}
+          >
+            {error}
+          </Text>
+        )}
+
+        <Button
+          type="clear"
+          buttonStyle={styles.secondaryButton}
+          containerStyle={styles.buttonContainer}
+          titleStyle={styles.secondaryButtonTitle}
+          onPress={!isLoading ? prevStep : undefined}
         >
-          Sign Up
-        </Text>
-        <TouchableOpacity disabled={isLoading} onPress={prevStep}>
-          <Feather name="arrow-left" size={24} color={grey3} />
-        </TouchableOpacity>
+          Already have an account? Login Instead.
+        </Button>
+
+        <View nativeID="clerk-captcha" />
       </View>
-
-      {!isVerifying && (
-        <>
-          <InputField
-            autoCapitalize="none"
-            value={emailAddress}
-            placeholder="Email..."
-            onChangeText={(email) => setEmailAddress(email)}
-            disabled={isLoading}
-          />
-          <InputField
-            value={password}
-            placeholder="Password..."
-            secureTextEntry={true}
-            onChangeText={(password) => setPassword(password)}
-            disabled={isLoading}
-          />
-          <Button
-            title="Sign Up"
-            loading={isLoading}
-            buttonStyle={styles.button}
-            containerStyle={styles.buttonContainer}
-            titleStyle={styles.buttonTitle}
-            onPress={!isLoading ? onSignUpPress : undefined}
-          />
-        </>
-      )}
-
-      {isVerifying && (
-        <>
-          <InputField
-            value={code}
-            placeholder="Code..."
-            onChangeText={(code) => setCode(code)}
-            disabled={isLoading}
-          />
-          <Button
-            title="Verify Email"
-            buttonStyle={styles.button}
-            containerStyle={styles.buttonContainer}
-            titleStyle={styles.buttonTitle}
-            onPress={!isLoading ? onPressVerify : undefined}
-          />
-        </>
-      )}
-
-      {error && (
-        <Text style={{ textAlign: "center", color: "red", marginTop: 16 }}>
-          {error}
-        </Text>
-      )}
-
-      <Button
-        buttonStyle={styles.secondaryButton}
-        containerStyle={styles.buttonContainer}
-        titleStyle={styles.secondaryButtonTitle}
-        onPress={!isLoading ? prevStep : undefined}
-      >
-        Already have an account? Login Instead.
-      </Button>
-
-      <View nativeID="clerk-captcha" />
-    </View>
+    </ScrollView>
   );
 };
 
 export default SignUp;
 
 const styles = StyleSheet.create({
+  form: {
+    width: "100%",
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 24,
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: 24,
+    marginBottom: 20,
   },
-  button: {
-    width: 240,
-    borderRadius: 25,
-    backgroundColor: "#3e31ab",
+  nameFields: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 12,
   },
+  nameField: {
+    flex: 1,
+    paddingHorizontal: 0,
+  },
+  inputField: {
+    paddingHorizontal: 0,
+    marginBottom: 12,
+  },
+  button: { width: 240, borderRadius: 25 },
   secondaryButton: {
     marginTop: 16,
     width: 240,
@@ -188,11 +286,10 @@ const styles = StyleSheet.create({
     backgroundColor: "transparent",
   },
   buttonContainer: {
-    elevation: 20,
     borderRadius: 25,
-    shadowColor: "#3e31ab",
     alignItems: "center",
+    marginTop: 4,
   },
-  buttonTitle: { fontFamily: "Lexend_400Regular" },
-  secondaryButtonTitle: { fontFamily: "Lexend_400Regular", fontSize: 12 },
+  buttonTitle: { fontFamily: "Lexend_600SemiBold" },
+  secondaryButtonTitle: { fontFamily: "Lexend_500Medium", fontSize: 13 },
 });

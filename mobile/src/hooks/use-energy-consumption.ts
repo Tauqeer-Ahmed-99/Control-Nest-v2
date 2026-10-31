@@ -1,11 +1,11 @@
 import { EnergyConsumptionData } from "@/models/energy-consumption";
+import { APIResponse } from "@/models/api";
 import { ApiRoutes } from "@/routes/routes";
-import { ApiResponse } from "@/utils/models";
 import useApiQuery from "./use-api-query";
 
 export type EnergyConsumptionRequest = { houseId: string };
 
-export type EnergyConsumptionResponse = ApiResponse<EnergyConsumptionData>;
+export type EnergyConsumptionResponse = APIResponse<EnergyConsumptionData>;
 
 const useEnergyConsumption = (
   searchParams: EnergyConsumptionRequest,

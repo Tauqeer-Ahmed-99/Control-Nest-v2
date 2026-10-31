@@ -12,11 +12,7 @@ const DefaultDeviceInfo = ({
   device?: Device | null;
   setDevice: React.Dispatch<React.SetStateAction<Device | null>>;
 }) => {
-  const {
-    theme: {
-      colors: { primary },
-    },
-  } = useTheme();
+  const { theme } = useTheme();
 
   const handleOnChange = (value: boolean) => {
     setDevice((device) => ({
@@ -38,7 +34,9 @@ const DefaultDeviceInfo = ({
           style={{
             height: 45,
             width: 80,
-            backgroundColor: primary,
+            backgroundColor: theme.colors.primary,
+            borderWidth: 1,
+            borderColor: theme.colors.grey5,
             justifyContent: "center",
             alignItems: "center",
             borderRadius: 20,

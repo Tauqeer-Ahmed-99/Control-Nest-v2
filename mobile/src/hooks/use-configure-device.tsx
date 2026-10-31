@@ -9,6 +9,7 @@ export type ConfigureDeviceRequest = {
   deviceId: string;
   deviceName?: string;
   pinNumber?: number;
+  gpioPinNumber?: number;
   status?: boolean;
   isDefault?: boolean;
   isScheduled?: boolean;

@@ -1,11 +1,13 @@
 import useAddRoom from "@/hooks/use-add-room";
-import { useHouseData } from "@/hooks/use-house";
+import useHouse, { useHouseData } from "@/hooks/use-house";
 import { ApiRoutes } from "@/routes/routes";
 import { Button, Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { ToastAndroid, View } from "react-native";
 import InputField from "./input-field";
+import LoadingSkeleton from "./loading-skeleton";
+import { FormSkeleton } from "./loading-placeholders";
 
 const AddRoomForm = ({ closeForm }: { closeForm: () => void }) => {
   const {
@@ -13,11 +15,32 @@ const AddRoomForm = ({ closeForm }: { closeForm: () => void }) => {
       colors: { secondary },
     },
   } = useTheme();
+  const houseQuery = useHouse();
   const house = useHouseData();
   const [roomName, setRoomName] = useState("");
   const { mutate: addRoom, isPending } = useAddRoom();
 
   const queryClient = useQueryClient();
+
+  if (houseQuery.isLoading) {
+    return (
+      <View
+        style={{
+          padding: 20,
+          paddingBottom: 28,
+          borderTopRightRadius: 24,
+          borderTopLeftRadius: 24,
+          backgroundColor: secondary,
+          gap: 16,
+        }}
+        accessible={false}
+        accessibilityElementsHidden
+      >
+        <LoadingSkeleton height={24} width="54%" />
+        <FormSkeleton fields={1} showActions />
+      </View>
+    );
+  }
 
   const handleSaveRoom = () => {
     addRoom(
@@ -44,14 +67,23 @@ const AddRoomForm = ({ closeForm }: { closeForm: () => void }) => {
   return (
     <View
       style={{
-        padding: 16,
-        borderTopRightRadius: 12,
-        borderTopLeftRadius: 12,
+        padding: 20,
+        paddingBottom: 28,
+        borderTopRightRadius: 24,
+        borderTopLeftRadius: 24,
         backgroundColor: secondary,
         gap: 16,
       }}
     >
-      <Text style={{ textAlign: "center", fontSize: 18 }}>Add New Room</Text>
+      <Text
+        style={{
+          textAlign: "center",
+          fontSize: 20,
+          fontFamily: "Lexend_600SemiBold",
+        }}
+      >
+        Add New Room
+      </Text>
       <InputField
         label="Room Name"
         placeholder="Enter room name"
@@ -67,7 +99,7 @@ const AddRoomForm = ({ closeForm }: { closeForm: () => void }) => {
           paddingHorizontal: 16,
         }}
       >
-        <Button onPress={closeForm} disabled={isPending}>
+        <Button type="clear" onPress={closeForm} disabled={isPending}>
           Cancel
         </Button>
         <Button onPress={handleSaveRoom} loading={isPending}>

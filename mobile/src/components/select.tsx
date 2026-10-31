@@ -1,6 +1,7 @@
 import { Picker } from "@react-native-picker/picker";
-import { Text } from "@rneui/themed";
+import { Text, useTheme } from "@rneui/themed";
 import { StyleSheet, View } from "react-native";
+import LoadingSkeleton from "./loading-skeleton";
 
 function Select<T>({
   label,
@@ -17,34 +18,44 @@ function Select<T>({
   items: T[];
   isLoading?: boolean;
 }) {
+  const { theme } = useTheme();
+
   return (
     <View style={styles.mainContainer}>
-      {label && <Text style={styles.label}>{label}</Text>}
-      <View style={styles.container}>
+      {label ? (
+        <Text style={[styles.label, { color: theme.colors.grey2 }]}>
+          {label}
+        </Text>
+      ) : null}
+      <View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.colors.secondary,
+            borderColor: theme.colors.grey5,
+          },
+        ]}
+      >
         <View style={styles.pickerContainer}>
-          <Picker
-            selectedValue={selectedValue ?? {}}
-            onValueChange={onValueChange}
-            style={styles.picker}
-            itemStyle={styles.pickerItem}
-            dropdownIconColor="#fff"
-          >
-            {isLoading ? (
-              <Picker.Item
-                key={1}
-                label={"Loading ..."}
-                value={"Loading ..."}
-              />
-            ) : (
-              items.map((item: T, index: number) => (
+          {isLoading ? (
+            <LoadingSkeleton height={22} width="58%" borderRadius={6} />
+          ) : (
+            <Picker
+              selectedValue={selectedValue ?? {}}
+              onValueChange={onValueChange}
+              style={[styles.picker, { color: theme.colors.black }]}
+              itemStyle={[styles.pickerItem, { color: theme.colors.black }]}
+              dropdownIconColor={theme.colors.grey2}
+            >
+              {items.map((item: T, index: number) => (
                 <Picker.Item
                   key={index}
-                  label={(item as unknown as any)[field]}
+                  label={(item as any)[field]}
                   value={item}
                 />
-              ))
-            )}
-          </Picker>
+              ))}
+            </Picker>
+          )}
         </View>
       </View>
     </View>
@@ -53,30 +64,36 @@ function Select<T>({
 
 const styles = StyleSheet.create({
   mainContainer: {
-    marginHorizontal: 12,
+    width: "100%",
+    paddingHorizontal: 10,
   },
   container: {
-    backgroundColor: "#2e2c49", // Dark background to match the text field
-    borderRadius: 10,
+    minHeight: 52,
+    borderRadius: 14,
+    borderWidth: 1,
+    justifyContent: "center",
+    paddingHorizontal: 12,
   },
   label: {
-    color: "#fff", // Grey color for the label to match the text field label
     fontSize: 14,
-    marginBottom: 8,
-    marginLeft: 8,
+    fontFamily: "Lexend_500Medium",
+    marginBottom: 7,
+    marginLeft: 4,
   },
   pickerContainer: {
-    borderRadius: 10,
+    height: 50,
+    borderRadius: 14,
     overflow: "hidden",
+    justifyContent: "center",
   },
   picker: {
-    color: "#fff", // White color for text inside the picker
     fontSize: 16,
-    height: 50, // Ensuring the picker has sufficient height
+    height: 50,
     width: "100%",
+    marginVertical: 0,
+    paddingVertical: 0,
   },
   pickerItem: {
-    color: "#000", // White color for the items in the dropdown
     fontSize: 16,
   },
 });

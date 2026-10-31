@@ -1,29 +1,34 @@
 import BottomNavigation from "@/components/bottom-navigation";
+import { BlurTargetView } from "expo-blur";
 import { useTheme } from "@rneui/themed";
 import { Stack } from "expo-router";
+import { useRef } from "react";
 import { StyleSheet, View } from "react-native";
 
 const TabsLayout = () => {
+  const { theme } = useTheme();
   const styles = useStyles();
+  const blurTarget = useRef<View | null>(null);
 
   return (
     <View style={styles.container}>
-      <View style={styles.content}>
+      <BlurTargetView ref={blurTarget} style={styles.content}>
         <Stack>
           <Stack.Screen
             name="[roomId]"
             options={{
               headerShown: true,
-              headerTintColor: "#ffffff",
+              headerTintColor: theme.colors.black,
               headerTitle: "Rooms",
               headerTitleAlign: "center",
               headerShadowVisible: false,
               headerTitleStyle: {
-                color: "#fff",
-                fontFamily: "Lexend_500Medium",
+                color: theme.colors.black,
+                fontFamily: "Lexend_600SemiBold",
+                fontSize: 17,
               },
               headerStyle: {
-                backgroundColor: "#3f3e45",
+                backgroundColor: theme.colors.primary,
               },
               statusBarTranslucent: true,
             }}
@@ -31,24 +36,12 @@ const TabsLayout = () => {
           <Stack.Screen
             name="[roomId]/[deviceId]"
             options={{
-              headerShown: true,
-              headerTintColor: "#ffffff",
-              headerTitle: "Device Details",
-              headerTitleAlign: "center",
-              headerShadowVisible: false,
-              headerTitleStyle: {
-                color: "#fff",
-                fontFamily: "Lexend_500Medium",
-              },
-              headerStyle: {
-                backgroundColor: "#232228",
-              },
-              statusBarTranslucent: true,
+              headerShown: false,
             }}
           />
         </Stack>
-      </View>
-      <BottomNavigation />
+      </BlurTargetView>
+      <BottomNavigation blurTarget={blurTarget} />
     </View>
   );
 };

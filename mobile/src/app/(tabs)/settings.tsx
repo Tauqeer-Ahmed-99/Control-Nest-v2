@@ -1,4 +1,5 @@
 import Tile from "@/components/tile";
+import LoadingSkeleton from "@/components/loading-skeleton";
 import {
   CONTROLLER_DEVICE_CONFIG,
   CONTROLLER_DEVICE_URL,
@@ -9,6 +10,10 @@ import {
   useSetMobileStorageData,
 } from "@/hooks/use-mobile-storage-data";
 import { ControllerConfig } from "@/models/controller-config";
+import {
+  ThemeMode,
+  useThemePreference,
+} from "@/providers/theme-preference-provider";
 import { getTypedRoute, Routes } from "@/routes/routes";
 import { useClerk, useUser } from "@clerk/expo";
 import AntDesign from "@expo/vector-icons/AntDesign";
@@ -20,7 +25,14 @@ import { BottomSheet, Button, Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import React, { useState } from "react";
-import { ScrollView, TouchableOpacity, View } from "react-native";
+import { Easing, ScrollView, TouchableOpacity, View } from "react-native";
+
+const CONFIRMATION_SHEET_ANIMATION_DURATION = 260;
+const THEME_OPTIONS: { value: ThemeMode; label: string }[] = [
+  { value: "system", label: "System" },
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+];
 
 enum SettingOption {
   HouseMembers = "House members",
@@ -40,7 +52,7 @@ interface SettingItem {
 
 const Settings = () => {
   const { signOut } = useClerk();
-  const { user } = useUser();
+  const { user, isLoaded: isUserLoaded } = useUser();
   const { data: config, isLoading: isLoadingConfig } =
     useGetMobileStorageData<ControllerConfig>(CONTROLLER_DEVICE_CONFIG);
   const { mutateAsync: setControllerConfig } = useSetMobileStorageData<null>(
@@ -52,8 +64,10 @@ const Settings = () => {
   const [selectedSetting, setSelectedSetting] = useState<SettingItem | null>(
     null,
   );
+  const [isConfirmationVisible, setIsConfirmationVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const { theme } = useTheme();
+  const { themeMode, setThemeMode } = useThemePreference();
   const {
     data: health,
     isLoading: isCheckingHealth,
@@ -70,6 +84,7 @@ const Settings = () => {
   );
   const isHealthy = health?.success === true && health.data.health === "ok";
   const isHealthBusy = isCheckingHealth || isRefreshingHealth;
+  const isInitialHealthLoading = isLoadingConfig || isCheckingHealth;
   const healthStatus =
     isLoadingConfig || isHealthBusy
       ? "Checking"
@@ -79,11 +94,11 @@ const Settings = () => {
           ? "Online"
           : "Offline";
   const healthColor = isHealthBusy
-    ? "#6BE7FF"
+    ? theme.colors.success
     : !isConfigured
       ? theme.colors.grey2
       : isHealthy
-        ? "#43D9A3"
+        ? theme.colors.success
         : theme.colors.error;
   const healthMessage =
     isLoadingConfig || isHealthBusy
@@ -95,7 +110,7 @@ const Settings = () => {
           : "The controller is not responding. Check its connection and try again.";
 
   const closeConfirmation = () => {
-    setSelectedSetting(null);
+    setIsConfirmationVisible(false);
   };
 
   const settings: SettingItem[] = [
@@ -116,26 +131,14 @@ const Settings = () => {
       requiresConfirmation: false,
     },
     {
-      option: SettingOption.LogoutUser,
-      label: "Log out",
-      iconLeft: <AntDesign name="logout" size={20} color="#6BE7FF" />,
-      iconRight: (
-        <MaterialIcons name="keyboard-arrow-right" size={24} color="grey" />
-      ),
-      onAction: async () => {
-        setIsLoading(true);
-        try {
-          await signOut();
-        } finally {
-          setIsLoading(false);
-        }
-      },
-    },
-    {
       option: SettingOption.LogoutHouse,
       label: "Disconnect this home",
       iconLeft: (
-        <FontAwesome6 name="house-circle-xmark" size={20} color="#6BE7FF" />
+        <FontAwesome6
+          name="house-circle-xmark"
+          size={20}
+          color={theme.colors.success}
+        />
       ),
       iconRight: (
         <MaterialIcons name="keyboard-arrow-right" size={24} color="grey" />
@@ -163,9 +166,33 @@ const Settings = () => {
       },
     },
     {
+      option: SettingOption.LogoutUser,
+      label: "Log out",
+      iconLeft: (
+        <AntDesign name="logout" size={20} color={theme.colors.success} />
+      ),
+      iconRight: (
+        <MaterialIcons name="keyboard-arrow-right" size={24} color="grey" />
+      ),
+      onAction: async () => {
+        setIsLoading(true);
+        try {
+          await signOut();
+        } finally {
+          setIsLoading(false);
+        }
+      },
+    },
+    {
       option: SettingOption.AboutUs,
       label: "About us",
-      iconLeft: <Entypo name="info-with-circle" size={20} color="#6BE7FF" />,
+      iconLeft: (
+        <Entypo
+          name="info-with-circle"
+          size={20}
+          color={theme.colors.success}
+        />
+      ),
       iconRight: (
         <MaterialIcons name="keyboard-arrow-right" size={24} color="grey" />
       ),
@@ -199,11 +226,90 @@ const Settings = () => {
       <ScrollView
         contentContainerStyle={{
           padding: 16,
-          paddingBottom: 112,
+          paddingBottom: 132,
           gap: 20,
         }}
         showsVerticalScrollIndicator={false}
       >
+        <View style={{ gap: 8 }}>
+          <Text
+            style={{
+              color: theme.colors.grey2,
+              fontSize: 12,
+              fontFamily: "Lexend_600SemiBold",
+              letterSpacing: 1.2,
+            }}
+          >
+            APPEARANCE
+          </Text>
+
+          <View
+            style={{
+              backgroundColor: theme.colors.secondary,
+              borderRadius: 20,
+              borderWidth: 1,
+              borderColor: theme.colors.grey5,
+              padding: 18,
+              gap: 14,
+            }}
+          >
+            <View style={{ gap: 4 }}>
+              <Text style={{ fontFamily: "Lexend_600SemiBold", fontSize: 16 }}>
+                Theme
+              </Text>
+              <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
+                Follow your device settings or choose a fixed theme.
+              </Text>
+            </View>
+
+            <View style={{ flexDirection: "row", gap: 8 }}>
+              {THEME_OPTIONS.map(({ value, label }) => {
+                const isSelected = themeMode === value;
+
+                return (
+                  <TouchableOpacity
+                    key={value}
+                    accessibilityRole="button"
+                    accessibilityLabel={`${label} theme`}
+                    accessibilityState={{ selected: isSelected }}
+                    onPress={() => setThemeMode(value)}
+                    activeOpacity={0.75}
+                    style={{
+                      flex: 1,
+                      minHeight: 48,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      paddingHorizontal: 4,
+                      borderRadius: 12,
+                      borderWidth: 1,
+                      borderColor: isSelected
+                        ? theme.colors.success
+                        : theme.colors.greyOutline,
+                      backgroundColor: isSelected
+                        ? theme.colors.success
+                        : theme.colors.primary,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: isSelected
+                          ? theme.mode === "dark"
+                            ? "#10201A"
+                            : "#FFFFFF"
+                          : theme.colors.black,
+                        fontFamily: "Lexend_600SemiBold",
+                        fontSize: 13,
+                      }}
+                    >
+                      {label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+
         <View style={{ gap: 8 }}>
           <Text
             style={{
@@ -221,7 +327,7 @@ const Settings = () => {
               backgroundColor: theme.colors.secondary,
               borderRadius: 20,
               borderWidth: 1,
-              borderColor: "rgba(107, 231, 255, 0.16)",
+              borderColor: theme.colors.grey5,
               padding: 18,
               gap: 16,
             }}
@@ -240,10 +346,17 @@ const Settings = () => {
                   borderRadius: 16,
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "rgba(107, 231, 255, 0.12)",
+                  backgroundColor:
+                    theme.mode === "dark"
+                      ? "rgba(104, 212, 181, 0.14)"
+                      : "rgba(18, 107, 91, 0.10)",
                 }}
               >
-                <Feather name="activity" size={24} color="#6BE7FF" />
+                <Feather
+                  name="activity"
+                  size={24}
+                  color={theme.colors.success}
+                />
               </View>
               <View style={{ flex: 1, gap: 4 }}>
                 <Text
@@ -251,98 +364,118 @@ const Settings = () => {
                 >
                   Controller connection
                 </Text>
-                <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
-                  {healthMessage}
-                </Text>
+                {isInitialHealthLoading ? (
+                  <LoadingSkeleton height={12} width="88%" borderRadius={5} />
+                ) : (
+                  <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
+                    {healthMessage}
+                  </Text>
+                )}
               </View>
             </View>
 
             <View
               style={{
                 height: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.09)",
+                backgroundColor: theme.colors.grey5,
               }}
             />
 
-            <View
-              style={{
-                flexDirection: "row",
-                alignItems: "center",
-                justifyContent: "space-between",
-                gap: 12,
-              }}
-            >
-              <View
-                style={{ flexDirection: "row", alignItems: "center", gap: 9 }}
-              >
-                <View
-                  style={{
-                    width: 9,
-                    height: 9,
-                    borderRadius: 5,
-                    backgroundColor: healthColor,
-                  }}
-                />
-                <Text style={{ color: theme.colors.grey2, fontSize: 13 }}>
-                  {isConfigured ? "Controller API" : "Controller setup"}
-                </Text>
-              </View>
-
               <View
                 style={{
-                  backgroundColor: `${healthColor}1F`,
-                  paddingHorizontal: 11,
-                  paddingVertical: 6,
-                  borderRadius: 99,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  gap: 12,
                 }}
               >
-                <Text
-                  style={{
-                    color: healthColor,
-                    fontSize: 12,
-                    fontFamily: "Lexend_600SemiBold",
-                  }}
-                >
-                  {healthStatus}
-                </Text>
-              </View>
+                {isInitialHealthLoading ? (
+                  <>
+                    <LoadingSkeleton height={13} width="37%" />
+                    <LoadingSkeleton height={26} width={82} borderRadius={99} />
+                  </>
+                ) : (
+                  <>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 9,
+                      }}
+                    >
+                      <View
+                        style={{
+                          width: 9,
+                          height: 9,
+                          borderRadius: 5,
+                          backgroundColor: healthColor,
+                        }}
+                      />
+                      <Text style={{ color: theme.colors.grey2, fontSize: 13 }}>
+                        {isConfigured ? "Controller API" : "Controller setup"}
+                      </Text>
+                    </View>
+                    <View
+                      style={{
+                        backgroundColor: `${healthColor}1F`,
+                        paddingHorizontal: 11,
+                        paddingVertical: 6,
+                        borderRadius: 99,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          color: healthColor,
+                          fontSize: 12,
+                          fontFamily: "Lexend_600SemiBold",
+                        }}
+                      >
+                        {healthStatus}
+                      </Text>
+                    </View>
+                  </>
+                )}
             </View>
 
-            <TouchableOpacity
-              accessibilityRole="button"
-              accessibilityLabel="Check controller health again"
-              disabled={!isConfigured || isHealthBusy}
-              onPress={() => void refreshHealth()}
-              activeOpacity={0.7}
-              style={{
-                alignSelf: "flex-start",
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 8,
-                opacity: !isConfigured || isHealthBusy ? 0.55 : 1,
-                paddingVertical: 2,
-              }}
-            >
-              <Feather
-                name="refresh-cw"
-                size={15}
-                color="#6BE7FF"
-                style={
-                  isHealthBusy
-                    ? { transform: [{ rotate: "-30deg" }] }
-                    : undefined
-                }
-              />
-              <Text
+            {isInitialHealthLoading ? (
+              <LoadingSkeleton height={16} width={106} borderRadius={5} />
+            ) : (
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Check controller health again"
+                disabled={!isConfigured || isHealthBusy}
+                onPress={() => void refreshHealth()}
+                activeOpacity={0.7}
                 style={{
-                  color: "#6BE7FF",
-                  fontSize: 13,
-                  fontFamily: "Lexend_500Medium",
+                  alignSelf: "flex-start",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 8,
+                  opacity: !isConfigured || isHealthBusy ? 0.55 : 1,
+                  paddingVertical: 2,
                 }}
               >
-                {isHealthBusy ? "Checking…" : "Check again"}
-              </Text>
-            </TouchableOpacity>
+                <Feather
+                  name="refresh-cw"
+                  size={15}
+                  color={theme.colors.success}
+                  style={
+                    isHealthBusy
+                      ? { transform: [{ rotate: "-30deg" }] }
+                      : undefined
+                  }
+                />
+                <Text
+                  style={{
+                    color: theme.colors.success,
+                    fontSize: 13,
+                    fontFamily: "Lexend_500Medium",
+                  }}
+                >
+                  {isHealthBusy ? "Checking…" : "Check again"}
+                </Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -363,7 +496,7 @@ const Settings = () => {
               backgroundColor: theme.colors.secondary,
               borderRadius: 20,
               borderWidth: 1,
-              borderColor: "rgba(255, 255, 255, 0.06)",
+              borderColor: theme.colors.grey5,
               padding: 18,
               gap: 17,
             }}
@@ -371,26 +504,28 @@ const Settings = () => {
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
             >
-              <Feather name="home" size={18} color="#6BE7FF" />
+              <Feather name="home" size={18} color={theme.colors.success} />
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
                   Home
                 </Text>
-                <Text
-                  style={{ fontFamily: "Lexend_500Medium" }}
-                  numberOfLines={1}
-                >
-                  {isLoadingConfig
-                    ? "Loading…"
-                    : (config?.house?.name ?? "Not connected")}
-                </Text>
+                {isLoadingConfig ? (
+                  <LoadingSkeleton height={14} width="62%" borderRadius={5} />
+                ) : (
+                  <Text
+                    style={{ fontFamily: "Lexend_500Medium" }}
+                    numberOfLines={1}
+                  >
+                    {config?.house?.name ?? "Not connected"}
+                  </Text>
+                )}
               </View>
             </View>
 
             <View
               style={{
                 height: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.07)",
+                backgroundColor: theme.colors.grey5,
                 marginLeft: 30,
               }}
             />
@@ -398,26 +533,28 @@ const Settings = () => {
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
             >
-              <Feather name="cpu" size={18} color="#6BE7FF" />
+              <Feather name="cpu" size={18} color={theme.colors.success} />
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
                   Controller device
                 </Text>
-                <Text
-                  style={{ fontFamily: "Lexend_500Medium" }}
-                  numberOfLines={1}
-                >
-                  {isLoadingConfig
-                    ? "Loading…"
-                    : (config?.controllerDevice?.name ?? "Not connected")}
-                </Text>
+                {isLoadingConfig ? (
+                  <LoadingSkeleton height={14} width="71%" borderRadius={5} />
+                ) : (
+                  <Text
+                    style={{ fontFamily: "Lexend_500Medium" }}
+                    numberOfLines={1}
+                  >
+                    {config?.controllerDevice?.name ?? "Not connected"}
+                  </Text>
+                )}
               </View>
             </View>
 
             <View
               style={{
                 height: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.07)",
+                backgroundColor: theme.colors.grey5,
                 marginLeft: 30,
               }}
             />
@@ -426,34 +563,38 @@ const Settings = () => {
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
               >
-                <Feather name="globe" size={18} color="#6BE7FF" />
+                <Feather name="globe" size={18} color={theme.colors.success} />
                 <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
                   Controller device URL
                 </Text>
               </View>
               <View
                 style={{
-                  backgroundColor: "rgba(20, 19, 25, 0.42)",
+                  backgroundColor: theme.colors.primary,
                   borderRadius: 12,
                   paddingHorizontal: 13,
                   paddingVertical: 12,
                   marginLeft: 30,
                 }}
               >
-                <Text
-                  selectable
-                  accessibilityLabel="Controller device URL"
-                  style={{
-                    color: controllerUrl ? "#6BE7FF" : theme.colors.grey3,
-                    fontSize: 13,
-                    lineHeight: 20,
-                    fontFamily: "Lexend_500Medium",
-                  }}
-                >
-                  {isLoadingConfig
-                    ? "Loading controller address…"
-                    : (controllerUrl ?? "No controller URL saved")}
-                </Text>
+                {isLoadingConfig ? (
+                  <LoadingSkeleton height={18} width="78%" borderRadius={5} />
+                ) : (
+                  <Text
+                    selectable
+                    accessibilityLabel="Controller device URL"
+                    style={{
+                      color: controllerUrl
+                        ? theme.colors.success
+                        : theme.colors.grey3,
+                      fontSize: 13,
+                      lineHeight: 20,
+                      fontFamily: "Lexend_500Medium",
+                    }}
+                  >
+                    {controllerUrl ?? "No controller URL saved"}
+                  </Text>
+                )}
                 {Boolean(controllerUrl) && (
                   <Text
                     style={{
@@ -471,7 +612,7 @@ const Settings = () => {
             <View
               style={{
                 height: 1,
-                backgroundColor: "rgba(255, 255, 255, 0.07)",
+                backgroundColor: theme.colors.grey5,
                 marginLeft: 30,
               }}
             />
@@ -479,25 +620,29 @@ const Settings = () => {
             <View
               style={{ flexDirection: "row", alignItems: "center", gap: 12 }}
             >
-              <Feather name="user" size={18} color="#6BE7FF" />
+              <Feather name="user" size={18} color={theme.colors.success} />
               <View style={{ flex: 1, gap: 3 }}>
                 <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
                   Signed in as
                 </Text>
-                <Text
-                  style={{ fontFamily: "Lexend_500Medium" }}
-                  numberOfLines={1}
-                >
-                  {accountName}
-                </Text>
-                {Boolean(accountEmail) && (
+                {isUserLoaded ? (
+                  <Text
+                    style={{ fontFamily: "Lexend_500Medium" }}
+                    numberOfLines={1}
+                  >
+                    {accountName}
+                  </Text>
+                ) : (
+                  <LoadingSkeleton height={14} width="57%" borderRadius={5} />
+                )}
+                {isUserLoaded && Boolean(accountEmail) ? (
                   <Text
                     style={{ color: theme.colors.grey2, fontSize: 12 }}
                     numberOfLines={1}
                   >
                     {accountEmail}
                   </Text>
-                )}
+                ) : null}
               </View>
             </View>
           </View>
@@ -525,6 +670,7 @@ const Settings = () => {
                 }
 
                 setSelectedSetting(setting);
+                setIsConfirmationVisible(true);
               }}
               activeOpacity={0.75}
             >
@@ -563,7 +709,10 @@ const Settings = () => {
       </ScrollView>
 
       <BottomSheet
-        isVisible={Boolean(selectedSetting)}
+        isVisible={isConfirmationVisible}
+        animationType="slide"
+        animationDuration={CONFIRMATION_SHEET_ANIMATION_DURATION}
+        easing={Easing.out(Easing.cubic)}
         onBackdropPress={closeConfirmation}
       >
         <View
@@ -595,10 +744,20 @@ const Settings = () => {
               gap: 16,
             }}
           >
-            <Button disabled={isLoading} onPress={closeConfirmation}>
+            <Button
+              type="clear"
+              disabled={isLoading}
+              onPress={closeConfirmation}
+            >
               Cancel
             </Button>
             <Button
+              color={
+                selectedSetting?.option === SettingOption.LogoutUser ||
+                selectedSetting?.option === SettingOption.LogoutHouse
+                  ? "error"
+                  : "success"
+              }
               loading={isLoading}
               onPress={() => void selectedSetting?.onAction?.()}
             >

@@ -2,37 +2,29 @@ import useHouse from "@/hooks/use-house";
 import { getTypedRoute, Routes } from "@/routes/routes";
 import { Text, useTheme } from "@rneui/themed";
 import { router } from "expo-router";
-import { useWindowDimensions, View } from "react-native";
+import { View } from "react-native";
 import Grid from "./grid";
 import Header from "./header";
-import LoadingSkeleton from "./loading-skeleton";
+import CardGridSkeleton from "./card-grid-skeleton";
 import MessageContainer from "./message-container";
 import RoomCard from "./room-card";
-
-const GAP = 30;
-const PADDING_HORIZONTAL = 12 * 2;
 
 const Rooms = () => {
   const {
     theme: {
-      colors: { grey3 },
+      colors: { error: errorColor, grey3 },
     },
   } = useTheme();
-  const { data, isPending, error } = useHouse();
-  const { width } = useWindowDimensions();
+  const { data, isLoading, error } = useHouse();
 
-  const cardWidth = (width - GAP - PADDING_HORIZONTAL) / 2;
-
-  if (isPending) {
+  if (isLoading) {
     return (
       <View style={{ marginVertical: 16 }}>
-        <Grid
-          items={["Loading 1", "Loading 2", "Loading 3", "Loading 4"]}
-          renderItem={() => (
-            <LoadingSkeleton height={150} width={cardWidth} borderRadius={12} />
-          )}
-          rowGap={20}
+        <Header
+          heading="Rooms"
+          onDetails={() => router.push(getTypedRoute(Routes.Rooms))}
         />
+        <CardGridSkeleton count={4} />
       </View>
     );
   }
@@ -40,8 +32,8 @@ const Rooms = () => {
   if (!data) {
     return (
       <View style={{ marginVertical: 16 }}>
-        <Text style={{ textAlign: "center", color: grey3 }}>
-          {error.message}
+        <Text style={{ textAlign: "center", color: error ? errorColor : grey3 }}>
+          {error?.message ?? "No house is connected yet."}
         </Text>
       </View>
     );
@@ -70,7 +62,7 @@ const Rooms = () => {
       <Grid
         items={rooms}
         renderItem={(room) => <RoomCard room={room} />}
-        rowGap={30}
+        rowGap={16}
         noDataMessage="Rooms not available create a new room."
       />
     </View>

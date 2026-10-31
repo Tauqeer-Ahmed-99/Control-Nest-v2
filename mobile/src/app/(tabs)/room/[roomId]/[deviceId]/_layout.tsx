@@ -1,18 +1,22 @@
+import { useTheme } from "@rneui/themed";
 import { Stack } from "expo-router";
 
 const DeviceLayout = () => {
+  const { theme } = useTheme();
+
   return (
     <Stack
       screenOptions={{
-        headerTintColor: "#ffffff",
+        headerTintColor: theme.colors.black,
         headerTitleAlign: "center",
         headerShadowVisible: false,
         headerTitleStyle: {
-          color: "#fff",
-          fontFamily: "Lexend_500Medium",
+          color: theme.colors.black,
+          fontFamily: "Lexend_600SemiBold",
+          fontSize: 17,
         },
         headerStyle: {
-          backgroundColor: "#232228",
+          backgroundColor: theme.colors.primary,
         },
         statusBarTranslucent: true,
       }}
@@ -20,13 +24,14 @@ const DeviceLayout = () => {
       <Stack.Screen
         name="index"
         options={{
-          headerShown: false,
+          headerShown: true,
+          headerTitle: "Device Details",
         }}
       />
       <Stack.Screen
         name="control-logs"
         options={{
-          // headerShown: false,
+          headerShown: true,
           headerTitle: "Control Logs",
         }}
       />

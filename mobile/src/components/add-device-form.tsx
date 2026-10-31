@@ -1,7 +1,7 @@
 import useAddDevice from "@/hooks/use-add-device";
 import useAvailableGPIOPins from "@/hooks/use-available-gpio-pins";
-import { useRoomsData } from "@/hooks/use-house";
-import { HeaderPinConfig } from "@/models/pin-header-config";
+import useHouse from "@/hooks/use-house";
+import { GPIOPinConfig } from "@/models/pin-header-config";
 import { Room } from "@/models/room";
 import { ApiRoutes } from "@/routes/routes";
 import { Button, Text, useTheme } from "@rneui/themed";
@@ -12,6 +12,8 @@ import { ToastAndroid, View } from "react-native";
 import InputField from "./input-field";
 import MessageContainer from "./message-container";
 import Select from "./select";
+import { FormSkeleton } from "./loading-placeholders";
+import LoadingSkeleton from "./loading-skeleton";
 
 const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
   const {
@@ -21,7 +23,14 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
   } = useTheme();
 
   const { roomId } = useLocalSearchParams();
-  const rooms = useRoomsData();
+  const houseQuery = useHouse();
+  const rooms = useMemo(
+    () =>
+      houseQuery.data?.details == null
+        ? houseQuery.data?.data?.rooms ?? []
+        : [],
+    [houseQuery.data],
+  );
   const room = useMemo(
     () => rooms?.find((room) => room.id === roomId),
     [roomId, rooms],
@@ -31,27 +40,34 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
   );
   const [deviceName, setDeviceName] = useState("");
   const [deviceRating, setDeviceRating] = useState("");
-  const { data: availableGPIOPins } = useAvailableGPIOPins({
-    houseId: selectedRoom?.houseId ?? "",
-  });
+  const {
+    data: availableGPIOPins,
+    isLoading: isLoadingAvailableGPIOPins,
+  } = useAvailableGPIOPins({ houseId: selectedRoom?.houseId ?? "" });
 
   const gpioPin = useMemo(
     () => availableGPIOPins?.data?.[0],
     [availableGPIOPins?.data],
   );
 
-  const [selectedGPIOPin, setSelectedGPIOPin] =
-    useState<HeaderPinConfig | null>(gpioPin ?? null);
+  const [selectedGPIOPinState, setSelectedGPIOPin] =
+    useState<GPIOPinConfig | null>(gpioPin ?? null);
+  const selectedGPIOPin = selectedGPIOPinState ?? gpioPin ?? null;
 
   const { mutate: addDevice, isPending } = useAddDevice();
 
   const queryClient = useQueryClient();
 
   const handleSaveDevice = () => {
+    if (!selectedRoom || !selectedGPIOPin) {
+      return;
+    }
+
     addDevice(
       {
-        roomId: selectedRoom?.id ?? "",
-        pinNumber: selectedGPIOPin?.gpioPinNumber!,
+        roomId: selectedRoom.id,
+        pinNumber: selectedGPIOPin.headerPinNumber,
+        gpioPinNumber: selectedGPIOPin.gpioPinNumber,
         deviceName,
         wattage: isNaN(Number(deviceRating)) ? 0.0 : Number(deviceRating),
       },
@@ -71,6 +87,30 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
     );
   };
 
+  if (houseQuery.isLoading) {
+    return (
+      <View
+        style={{
+          padding: 20,
+          paddingBottom: 28,
+          borderTopRightRadius: 24,
+          borderTopLeftRadius: 24,
+          backgroundColor: secondary,
+          gap: 16,
+        }}
+        accessible={false}
+        accessibilityElementsHidden
+      >
+        <LoadingSkeleton height={24} width="54%" />
+        <FormSkeleton fields={roomId ? 3 : 4} showActions />
+      </View>
+    );
+  }
+
+  if (houseQuery.error) {
+    return <MessageContainer message={houseQuery.error.message} />;
+  }
+
   if (!rooms.length) {
     return (
       <View>
@@ -82,7 +122,7 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
   if (availableGPIOPins?.data && !availableGPIOPins?.data?.length) {
     return (
       <View>
-        <MessageContainer message="GPIO Pins not available." />
+        <MessageContainer message="Header pins not available." />
       </View>
     );
   }
@@ -90,14 +130,23 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
   return (
     <View
       style={{
-        padding: 16,
-        borderTopRightRadius: 12,
-        borderTopLeftRadius: 12,
+        padding: 20,
+        paddingBottom: 28,
+        borderTopRightRadius: 24,
+        borderTopLeftRadius: 24,
         backgroundColor: secondary,
         gap: 16,
       }}
     >
-      <Text style={{ textAlign: "center", fontSize: 18 }}>Add New Device</Text>
+      <Text
+        style={{
+          textAlign: "center",
+          fontSize: 20,
+          fontFamily: "Lexend_600SemiBold",
+        }}
+      >
+        Add New Device
+      </Text>
       {!roomId && (
         <Select
           label="Room"
@@ -108,16 +157,17 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
         />
       )}
       <Select
-        label="GPIO Pin"
+        label="Header Pin Number"
         items={
-          availableGPIOPins?.data?.sort(
-            (a, b) => a.gpioPinNumber! - b.gpioPinNumber!,
-          ) ?? []
+          [...(availableGPIOPins?.data ?? [])].sort(
+            (a, b) => a.headerPinNumber - b.headerPinNumber,
+          )
         }
-        field="gpioPinNumber"
-        onValueChange={(newValue: HeaderPinConfig) =>
+        field="headerPinNumber"
+        onValueChange={(newValue: GPIOPinConfig) =>
           setSelectedGPIOPin(newValue)
         }
+        isLoading={isLoadingAvailableGPIOPins}
         selectedValue={selectedGPIOPin}
       />
       <InputField
@@ -128,7 +178,7 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
         disabled={isPending}
       />
       <InputField
-        label="Pwer Consumption Rating"
+        label="Power consumption"
         placeholder="Enter in watt"
         defaultValue=""
         onChangeText={(text) => setDeviceRating(text)}
@@ -143,7 +193,7 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
           paddingHorizontal: 16,
         }}
       >
-        <Button disabled={isPending} onPress={closeForm}>
+        <Button type="clear" disabled={isPending} onPress={closeForm}>
           Cancel
         </Button>
         <Button loading={isPending} onPress={handleSaveDevice}>

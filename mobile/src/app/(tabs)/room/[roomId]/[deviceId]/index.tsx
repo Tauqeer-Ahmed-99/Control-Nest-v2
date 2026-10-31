@@ -6,8 +6,9 @@ import DeviceStatusInfo from "@/components/device-status-info";
 import DeviceUpdateHistory from "@/components/device-update-history";
 import RemoveDevice from "@/components/remove-device";
 import SaveDevice from "@/components/save-device";
+import { DeviceDetailsSkeleton } from "@/components/loading-placeholders";
 import Tile from "@/components/tile";
-import { useDeviceData, useDevicesData } from "@/hooks/use-house";
+import useHouse, { useDeviceData, useDevicesData } from "@/hooks/use-house";
 import { Device } from "@/models/device";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text, useTheme } from "@rneui/themed";
@@ -17,12 +18,10 @@ import { TouchableOpacity, View } from "react-native";
 import { ScrollView } from "react-native-virtualized-view";
 
 const DeviceComponent = () => {
-  const {
-    theme: {
-      colors: { primary },
-    },
-  } = useTheme();
+  const { theme } = useTheme();
+  const primary = theme.colors.primary;
   const { roomId, deviceId } = useLocalSearchParams();
+  const houseQuery = useHouse();
   const deviceData = useDeviceData(roomId as string, deviceId as string);
   useDevicesData();
   const [device, setDevice] = useState<Device | null>(deviceData);
@@ -42,16 +41,37 @@ const DeviceComponent = () => {
       deviceData?.wattage?.toString() ?? deviceWattageRef.current;
   }, [deviceData?.name, deviceData?.wattage]);
 
+  if (houseQuery.isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: primary,
+          padding: 16,
+        }}
+      >
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 132 }}
+        >
+          <DeviceDetailsSkeleton />
+        </ScrollView>
+      </View>
+    );
+  }
+
   return (
     <View
       style={{
         flex: 1,
         backgroundColor: primary,
         padding: 16,
-        paddingBottom: 90,
       }}
     >
-      <ScrollView>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 132 }}
+      >
         <View style={{ gap: 16 }}>
           <DeviceInputFieldsInfo
             device={device}
@@ -93,7 +113,11 @@ const DeviceComponent = () => {
                 }}
               >
                 <Text style={{ fontSize: 16 }}>Control Logs</Text>
-                <MaterialIcons name="chevron-right" size={24} color="#fff" />
+                <MaterialIcons
+                  name="chevron-right"
+                  size={24}
+                  color={theme.colors.black}
+                />
               </View>
             </Tile>
           </TouchableOpacity>

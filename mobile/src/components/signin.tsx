@@ -705,11 +705,8 @@ const SignIn = ({
   nextStep: () => void;
   prevStep: () => void;
 }) => {
-  const {
-    theme: {
-      colors: { grey3 },
-    },
-  } = useTheme();
+  const { theme } = useTheme();
+  const { grey3 } = theme.colors;
 
   const styles = useStyles();
   const { signIn } = useSignIn();
@@ -718,6 +715,7 @@ const SignIn = ({
   const [step, setStep] = useState<AuthStep>("sign-in");
   const [emailAddress, setEmailAddress] = useState("");
   const [password, setPassword] = useState("");
+  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [mfaStrategy, setMfaStrategy] = useState<MfaStrategy>("totp");
@@ -1218,6 +1216,7 @@ const SignIn = ({
     <Button
       title={title}
       disabled={isLoading}
+      type="clear"
       buttonStyle={styles.secondaryButton}
       containerStyle={styles.buttonContainer}
       titleStyle={styles.secondaryButtonTitle}
@@ -1242,8 +1241,12 @@ const SignIn = ({
     availableFactors.some((factor) => factor.strategy === strategy);
 
   return (
-    <ScrollView style={{ width: "100%" }} keyboardShouldPersistTaps="handled">
-      <View style={{ width: "100%", padding: 32, justifyContent: "center" }}>
+    <ScrollView
+      style={{ width: "100%", flexShrink: 1 }}
+      contentContainerStyle={{ flexGrow: 1 }}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.form}>
         <View style={styles.header}>
           <Text style={styles.heading}>
             {step === "sign-in"
@@ -1265,8 +1268,12 @@ const SignIn = ({
         {step === "sign-in" && (
           <>
             <InputField
+              containerStyle={styles.inputField}
+              label="Email address"
               value={emailAddress}
-              placeholder="Enter Email..."
+              placeholder="you@example.com"
+              autoCapitalize="none"
+              keyboardType="email-address"
               onChangeText={(value) => {
                 setEmailAddress(value);
                 clearFeedback();
@@ -1275,9 +1282,35 @@ const SignIn = ({
             />
 
             <InputField
+              containerStyle={styles.inputField}
+              label="Password"
               value={password}
-              placeholder="Enter Password..."
-              secureTextEntry
+              placeholder="Enter password"
+              autoCapitalize="none"
+              secureTextEntry={!isPasswordVisible}
+              rightIcon={
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isPasswordVisible ? "Hide password" : "Show password"
+                  }
+                  onPress={() =>
+                    setIsPasswordVisible((isVisible) => !isVisible)
+                  }
+                  style={{
+                    width: 44,
+                    height: 44,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Feather
+                    name={isPasswordVisible ? "eye-off" : "eye"}
+                    size={20}
+                    color={theme.colors.grey2}
+                  />
+                </TouchableOpacity>
+              }
               onChangeText={(value) => {
                 setPassword(value);
                 clearFeedback();
@@ -1310,8 +1343,12 @@ const SignIn = ({
             </Text>
 
             <InputField
+              containerStyle={styles.inputField}
+              label="Email address"
               value={emailAddress}
-              placeholder="Enter Email..."
+              placeholder="you@example.com"
+              autoCapitalize="none"
+              keyboardType="email-address"
               onChangeText={(value) => {
                 setEmailAddress(value);
                 clearFeedback();
@@ -1341,8 +1378,10 @@ const SignIn = ({
             </Text>
 
             <InputField
+              containerStyle={styles.inputField}
+              label="Verification code"
               value={code}
-              placeholder="Enter Verification Code..."
+              placeholder="Enter code"
               onChangeText={(value) => {
                 setCode(value);
                 clearFeedback();
@@ -1370,9 +1409,35 @@ const SignIn = ({
             </Text>
 
             <InputField
+              containerStyle={styles.inputField}
+              label="New password"
               value={newPassword}
-              placeholder="Enter New Password..."
-              secureTextEntry
+              placeholder="Enter new password"
+              autoCapitalize="none"
+              secureTextEntry={!isPasswordVisible}
+              rightIcon={
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={
+                    isPasswordVisible ? "Hide password" : "Show password"
+                  }
+                  onPress={() =>
+                    setIsPasswordVisible((isVisible) => !isVisible)
+                  }
+                  style={{
+                    width: 44,
+                    height: 44,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Feather
+                    name={isPasswordVisible ? "eye-off" : "eye"}
+                    size={20}
+                    color={theme.colors.grey2}
+                  />
+                </TouchableOpacity>
+              }
               onChangeText={(value) => {
                 setNewPassword(value);
                 clearFeedback();
@@ -1402,11 +1467,15 @@ const SignIn = ({
             </Text>
 
             <InputField
+              containerStyle={styles.inputField}
+              label={
+                mfaStrategy === "backup_code" ? "Backup code" : "Verification code"
+              }
               value={code}
               placeholder={
                 mfaStrategy === "backup_code"
-                  ? "Enter Backup Code..."
-                  : "Enter Verification Code..."
+                  ? "Enter backup code"
+                  : "Enter code"
               }
               onChangeText={(value) => {
                 setCode(value);
@@ -1489,12 +1558,24 @@ const SignIn = ({
 export default SignIn;
 
 const useStyles = () => {
+  const { theme } = useTheme();
+
   return StyleSheet.create({
+    form: {
+      width: "100%",
+      paddingHorizontal: 24,
+      paddingTop: 24,
+      paddingBottom: 24,
+    },
     header: {
       flexDirection: "row",
       justifyContent: "space-between",
       alignItems: "center",
-      marginBottom: 24,
+      marginBottom: 20,
+    },
+    inputField: {
+      paddingHorizontal: 0,
+      marginBottom: 12,
     },
     heading: {
       fontFamily: "Lexend_600SemiBold",
@@ -1508,7 +1589,8 @@ const useStyles = () => {
     button: {
       width: 240,
       borderRadius: 25,
-      backgroundColor: "#3e31ab",
+      marginTop: 4,
+      backgroundColor: theme.colors.success,
     },
     secondaryButton: {
       marginTop: 16,
@@ -1517,27 +1599,27 @@ const useStyles = () => {
       backgroundColor: "transparent",
     },
     buttonContainer: {
-      elevation: 20,
       borderRadius: 25,
-      shadowColor: "#3e31ab",
       alignItems: "center",
     },
     buttonTitle: {
-      fontFamily: "Lexend_400Regular",
+      fontFamily: "Lexend_600SemiBold",
+      color: theme.mode === "dark" ? "#10201A" : "#FFFFFF",
     },
     secondaryButtonTitle: {
-      fontFamily: "Lexend_400Regular",
-      fontSize: 12,
+      fontFamily: "Lexend_500Medium",
+      fontSize: 13,
+      color: theme.colors.success,
     },
     errorMessage: {
       textAlign: "center",
-      color: "red",
+      color: theme.colors.error,
       marginTop: 16,
       fontFamily: "Lexend_400Regular",
     },
     successMessage: {
       textAlign: "center",
-      color: "green",
+      color: theme.colors.success,
       marginTop: 16,
       fontFamily: "Lexend_400Regular",
     },

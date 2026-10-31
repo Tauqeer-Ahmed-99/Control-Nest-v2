@@ -4,8 +4,11 @@ import Tile from "@/components/tile";
 import useAvailableGPIOPins from "@/hooks/use-available-gpio-pins";
 import { useHouseId } from "@/hooks/use-house";
 import { Device } from "@/models/device";
-import { HeaderPinConfig } from "@/models/pin-header-config";
-import React, { useCallback, useMemo } from "react";
+import {
+  GPIOPinConfig,
+  HeaderPinType,
+} from "@/models/pin-header-config";
+import React, { useCallback, useMemo, useState } from "react";
 
 const DeviceInputFieldsInfo = ({
   device,
@@ -18,78 +21,113 @@ const DeviceInputFieldsInfo = ({
   deviceNameRef: React.MutableRefObject<string>;
   deviceWattageRef: React.MutableRefObject<string>;
 }) => {
+  const [deviceName, setDeviceName] = useState(device?.name ?? "");
+  const [deviceWattage, setDeviceWattage] = useState(
+    device?.wattage?.toString() ?? "",
+  );
   const houseId = useHouseId();
   const { data: availableGPIOPins, isLoading: isLoadingAvailableGPIOPins } =
     useAvailableGPIOPins({ houseId: houseId ?? "" });
+  const devicePinNumber = device?.pinNumber;
+  const deviceGpioPinNumber = device?.gpioPinNumber;
 
   const selectedPinConfig = useMemo(
-    () =>
-      availableGPIOPins?.data?.find(
-        (gpioConfig) => gpioConfig.gpioPinNumber === device?.pinNumber,
-      ),
-    [availableGPIOPins?.data, device],
+    () => {
+      const availablePin = availableGPIOPins?.data?.find(
+        (pinConfig) => pinConfig.headerPinNumber === devicePinNumber,
+      );
+
+      if (availablePin) {
+        return availablePin;
+      }
+
+      if (
+        devicePinNumber !== undefined &&
+        deviceGpioPinNumber !== undefined
+      ) {
+        return {
+          headerPinNumber: devicePinNumber,
+          gpioPinNumber: deviceGpioPinNumber,
+          type: HeaderPinType.GPIO,
+          voltage: null,
+        } as GPIOPinConfig;
+      }
+
+      return undefined;
+    },
+    [availableGPIOPins?.data, deviceGpioPinNumber, devicePinNumber],
   );
 
   const availablePins = useMemo(
-    () =>
-      availableGPIOPins
+    () => {
+      const available = [...(availableGPIOPins?.data ?? [])].sort(
+        (a, b) => a.headerPinNumber - b.headerPinNumber,
+      );
+
+      return selectedPinConfig
         ? [
-            {
-              gpioPinNumber: device?.pinNumber ?? 0,
-              headerPinNumber: Number(),
-            } as HeaderPinConfig,
-            ...(availableGPIOPins?.data?.sort(
-              (a, b) => a.gpioPinNumber! - b.gpioPinNumber!,
-            ) ?? []),
+            selectedPinConfig,
+            ...available.filter(
+              (pinConfig) =>
+                pinConfig.headerPinNumber !== selectedPinConfig.headerPinNumber,
+            ),
           ]
-        : [],
-    [availableGPIOPins],
+        : available;
+    },
+    [availableGPIOPins?.data, selectedPinConfig],
   );
 
   const handleDeviceNameChange = useCallback(
     (text: string) => {
       deviceNameRef.current = text;
+      setDeviceName(text);
     },
-    [device],
+    [deviceNameRef],
   );
 
   const handleDeviceWattageChange = useCallback(
     (text: string) => {
       deviceWattageRef.current = text;
+      setDeviceWattage(text);
     },
-    [device],
+    [deviceWattageRef],
   );
 
   const handleGPIOPinChange = useCallback(
-    (newValue: any, index: number) => {
-      setDevice(
-        (device) =>
-          ({ ...device, pinNumber: newValue.gpioPinNumber }) as Device,
+    (newValue: GPIOPinConfig) => {
+      setDevice((currentDevice) =>
+        currentDevice
+          ? {
+              ...currentDevice,
+              pinNumber: newValue.headerPinNumber,
+              gpioPinNumber: newValue.gpioPinNumber,
+            }
+          : currentDevice,
       );
     },
-    [device, availableGPIOPins, selectedPinConfig],
+    [setDevice],
   );
 
   return (
     <Tile>
       <InputField
         label="Device Name"
-        defaultValue={deviceNameRef.current}
+        value={deviceName}
         onChangeText={handleDeviceNameChange}
       />
       <InputField
         label="Consumption Rating"
-        defaultValue={deviceWattageRef.current}
+        value={deviceWattage}
         onChangeText={handleDeviceWattageChange}
         keyboardType="number-pad"
       />
       <Select
-        label="GPIO Pin"
+        label="Header Pin Number"
         isLoading={isLoadingAvailableGPIOPins}
         items={availablePins}
         onValueChange={handleGPIOPinChange}
         selectedValue={selectedPinConfig ?? {}}
-        field="gpioPinNumber"
+        field="headerPinNumber"
       />
     </Tile>
   );

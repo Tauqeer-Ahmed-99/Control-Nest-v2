@@ -29,3 +29,8 @@ export type HeaderPinConfig =
       gpioPinNumber: null;
       voltage: null;
     });
+
+export type GPIOPinConfig = Extract<
+  HeaderPinConfig,
+  { type: HeaderPinType.GPIO }
+>;

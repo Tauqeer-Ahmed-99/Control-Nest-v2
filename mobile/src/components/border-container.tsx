@@ -1,5 +1,4 @@
 import { useTheme } from "@rneui/themed";
-import { LinearGradient } from "expo-linear-gradient";
 import { View, ViewStyle } from "react-native";
 
 const BorderContainer = ({
@@ -17,120 +16,61 @@ const BorderContainer = ({
 }) => {
   const { theme } = useTheme();
 
-  const borderWidthFactor = (borderWidth ?? 5) * 2;
-  const whiteBorderWidthFactor = (whiteBorderWidth ?? 1.5) * 2;
-
   if (whiteBorder) {
+    const ringWidth = Math.max(2, whiteBorderWidth ?? 1.5);
+    const innerStyle: ViewStyle = {
+      width: style.width,
+      height: style.height,
+      borderRadius: style.borderRadius,
+      overflow: "hidden",
+      alignItems: "center",
+      justifyContent: "center",
+    };
+
     return (
-      <LinearGradient
-        dither
-        colors={[
-          theme.colors.success,
-          theme.colors.warning,
-          theme.colors.error,
-        ]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <View
         style={[
           style,
           {
-            justifyContent: "center",
+            width:
+              typeof style.width === "number"
+                ? style.width + ringWidth * 2
+                : style.width,
+            height:
+              typeof style.height === "number"
+                ? style.height + ringWidth * 2
+                : style.height,
+            borderRadius:
+              typeof style.borderRadius === "number"
+                ? style.borderRadius + ringWidth
+                : style.borderRadius,
+            borderWidth: ringWidth,
+            borderColor: theme.colors.success,
+            backgroundColor: theme.colors.secondary,
             alignItems: "center",
-            height: style.height
-              ? (style.height as number) + borderWidthFactor
-              : undefined,
-            width: style.width
-              ? (style.width as number) + borderWidthFactor
-              : undefined,
-            borderRadius: style.borderRadius
-              ? (style.borderRadius as number) + borderWidthFactor / 2
-              : undefined,
+            justifyContent: "center",
           },
         ]}
       >
-        <View
-          style={[
-            {
-              ...style,
-              position: undefined,
-              top: undefined,
-              bottom: undefined,
-              left: undefined,
-              right: undefined,
-            },
-            {
-              justifyContent: "center",
-              alignItems: "center",
-              height: style.height
-                ? (style.height as number) + whiteBorderWidthFactor
-                : undefined,
-              width: style.width
-                ? (style.width as number) + whiteBorderWidthFactor
-                : undefined,
-              backgroundColor: theme.colors.white,
-              borderRadius: style.borderRadius
-                ? (style.borderRadius as number) + whiteBorderWidthFactor / 2
-                : undefined,
-            },
-          ]}
-        >
-          <View
-            style={{
-              ...style,
-              backgroundColor: theme.colors.secondary,
-              borderRadius: style.borderRadius,
-              position: undefined,
-              top: undefined,
-              bottom: undefined,
-              left: undefined,
-              right: undefined,
-            }}
-          >
-            {children}
-          </View>
-        </View>
-      </LinearGradient>
+        <View style={innerStyle}>{children}</View>
+      </View>
     );
   }
 
   return (
-    <LinearGradient
-      dither
-      colors={[theme.colors.success, theme.colors.warning, theme.colors.error]}
-      start={{ x: 0, y: 0 }}
-      end={{ x: 1, y: 1 }}
+    <View
       style={[
         style,
         {
-          justifyContent: "center",
-          alignItems: "center",
-          height: style.height
-            ? (style.height as number) + borderWidthFactor
-            : undefined,
-          width: style.width
-            ? (style.width as number) + borderWidthFactor
-            : undefined,
-          borderRadius: style.borderRadius
-            ? (style.borderRadius as number) + borderWidthFactor / 2
-            : undefined,
+          borderWidth: borderWidth ? Math.max(1, borderWidth / 2) : 1,
+          borderColor: theme.colors.grey5,
+          backgroundColor: theme.colors.secondary,
+          overflow: "hidden",
         },
       ]}
     >
-      <View
-        style={{
-          ...style,
-          backgroundColor: theme.colors.secondary,
-          borderRadius: style.borderRadius,
-          position: undefined,
-          top: undefined,
-          bottom: undefined,
-          left: undefined,
-          right: undefined,
-        }}
-      >
-        {children}
-      </View>
-    </LinearGradient>
+      {children}
+    </View>
   );
 };
 

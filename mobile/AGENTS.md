@@ -1,5 +1,9 @@
 This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
 
+## UI design standard
+
+Before creating or updating mobile UI, read [UI-DESIGN-STANDARDS.md](UI-DESIGN-STANDARDS.md). Use its semantic theme vocabulary, typography, surfaces, control sizes, and accessibility conventions so new UI stays consistent with the app.
+
 ## Expo has changed — do not trust your training data
 
 Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:

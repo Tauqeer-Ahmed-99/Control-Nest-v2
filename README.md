@@ -2,7 +2,7 @@
 
 Control Nest is the mobile app and cloud service for managing AutoPi Hub home controllers. Sign in to manage a home, discover and pair a controller, then control devices and schedules from the app.
 
-> **Setup guide in progress:** the controller installation and production deployment steps are being revised. This README describes the current architecture and pairing flow; it does not yet provide a complete, copy-and-paste deployment guide.
+> Raspberry Pi controller install and update commands are available below. Hosted API and mobile deployment still require their own environment configuration.
 
 ## How it works
 
@@ -22,15 +22,29 @@ The system has three parts:
 
 ## Internet access and security
 
-Configured controllers are reachable from the public Internet through their Cloudflare Tunnel hostname. The tunnel avoids configuring inbound port forwarding on the home router, but the controller is no longer local-network-only. The controller API currently validates Clerk session tokens, and the hosted API checks user and house access. Treat tunnel tokens, Clerk secret keys, database credentials, and controller credentials as secrets; never commit them to the repository.
+Configured controllers are reachable from the public Internet through their Cloudflare Tunnel hostname. The tunnel avoids configuring inbound port forwarding on the home router, but the controller is no longer local-network-only. The controller API currently validates Clerk session tokens, and the hosted API checks user and house access. Keep tunnel tokens, Clerk secret keys, database credentials, and other private deployment credentials out of documentation. The tracked `controller/.env` is the controller configuration used by this repository; review it before reusing or distributing the project.
 
 Mobile build variables prefixed with `EXPO_PUBLIC_` are included in the client app and must not contain secret credentials. Use them only for values intended to be public, such as the API URL and Clerk publishable key.
 
-## Installation and deployment status
+## Raspberry Pi controller installation and updates
 
-The previous local-only installation procedure is obsolete. The new flow depends on a configured hosted API, Clerk, PostgreSQL, and Cloudflare, as well as the controller's local-network discovery and tunnel setup. Exact installation, environment provisioning, and release steps are still being finalized; follow the deployment instructions when they are added here rather than relying on the old commands.
+Run the installer on Raspberry Pi OS as a normal user with `sudo` access, `curl` and `tar` installed, and an internet connection:
 
-The source currently expects the following environment variable names. Supply values through the appropriate private environment configuration for each component; do not add real credentials to this README.
+```bash
+curl -o- https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main/controller/scripts/install.sh | bash
+```
+
+The installer downloads the repository archive without Git, places the project under `~/Control-Nest-v2`, and sets up the Python environment, required packages, and the `autopihub` systemd service. It uses the tracked `controller/.env` configuration included in the archive.
+
+To update an installed controller, run:
+
+```bash
+curl -o- https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main/controller/scripts/update.sh | bash
+```
+
+The updater downloads the latest `main` archive, updates the controller's Python dependencies and files, then restarts and checks the `autopihub` service. If that service is not installed, it prints a warning and exits; run the installer first. Both commands run as the normal Pi user and use `sudo` for system operations. The scripts share repository settings and archive-download logic through `controller/scripts/common.sh`.
+
+The source expects the following environment variable names. Controller values are supplied by the tracked `controller/.env`; configure hosted API values in the server's private environment. Do not add credentials to this README.
 
 ### Hosted API (`server/`)
 
@@ -56,7 +70,7 @@ The source currently expects the following environment variable names. Supply va
 
 ## Development entry points
 
-The hosted API and mobile app are separate projects with their own dependency manifests. Their package scripts are defined in `server/package.json` and `mobile/package.json`. Configure the required environment variables before starting either app. Controller installation and service registration instructions will be added after that process is finalized.
+The hosted API and mobile app are separate projects with their own dependency manifests. Their package scripts are defined in `server/package.json` and `mobile/package.json`. Configure the required environment variables before starting either app. For Raspberry Pi controller installation and updates, use the commands above or see [`controller/README.md`](controller/README.md).
 
 ## Repository layout
 

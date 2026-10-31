@@ -5,8 +5,13 @@
 // import { ScrollView } from "react-native-virtualized-view";
 
 import ControlLogs from "@/components/control-logs";
-import { useHouseId } from "@/hooks/use-house";
-import { ActivityIndicator } from "react-native";
+import MessageContainer from "@/components/message-container";
+import { ControlLogListSkeleton } from "@/components/loading-placeholders";
+import { CONTROLLER_DEVICE_CONFIG } from "@/constants/storage";
+import { useGetMobileStorageData } from "@/hooks/use-mobile-storage-data";
+import { ControllerConfig } from "@/models/controller-config";
+import { useTheme } from "@rneui/themed";
+import { View } from "react-native";
 
 // const getNotificationHeading = (eventName: SocketEvent) => {
 //   switch (eventName) {
@@ -87,10 +92,38 @@ import { ActivityIndicator } from "react-native";
 // export default Notifications;
 
 const Notifications = () => {
-  const houseId = useHouseId();
+  const { data: config, isLoading } =
+    useGetMobileStorageData<ControllerConfig>(CONTROLLER_DEVICE_CONFIG);
+  const houseId = config?.house?.id;
+  const { theme } = useTheme();
+
+  if (isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          padding: 16,
+          paddingBottom: 120,
+          backgroundColor: theme.colors.primary,
+        }}
+      >
+        <ControlLogListSkeleton />
+      </View>
+    );
+  }
 
   if (!houseId) {
-    return <ActivityIndicator />;
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: theme.colors.primary,
+          padding: 16,
+        }}
+      >
+        <MessageContainer message="Connect to a house to view notifications." />
+      </View>
+    );
   }
 
   return <ControlLogs logType="house" houseId={houseId} />;

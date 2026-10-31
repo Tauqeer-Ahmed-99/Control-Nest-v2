@@ -1,65 +1,65 @@
 import useUsername from "@/hooks/use-username";
 import { useUser } from "@clerk/expo";
-import { Image, Text, useTheme } from "@rneui/themed";
-import { View } from "react-native";
-import BorderContainer from "./border-container";
+import { Text, useTheme } from "@rneui/themed";
+import { Image, View } from "react-native";
+import LoadingSkeleton from "./loading-skeleton";
 
 const UserProfile = () => {
-  const { user } = useUser();
+  const { user, isLoaded } = useUser();
   const { theme } = useTheme();
   const username = useUsername();
 
   return (
     <View
       style={{
-        height: 150,
-        justifyContent: "flex-end",
-        backgroundColor: theme.colors.secondary,
+        minHeight: 94,
+        flexDirection: "row",
+        alignItems: "center",
+        paddingHorizontal: 18,
+        paddingVertical: 14,
+        gap: 14,
+        backgroundColor: theme.colors.primary,
       }}
     >
-      <View
-        style={{
-          width: "100%",
-          height: 125,
-          backgroundColor: theme.colors.primary,
-          position: "relative",
-          alignItems: "center",
-        }}
-      >
-        <View
+      {isLoaded ? (
+        <Image
+          source={{ uri: user?.imageUrl }}
           style={{
-            height: 100,
-            width: 100,
-            borderRadius: 50,
-            backgroundColor: theme.colors.primary,
-            position: "absolute",
-            top: -25,
-            left: "50%",
-            transform: [{ translateX: -50 }],
+            width: 54,
+            height: 54,
+            borderRadius: 27,
+            borderWidth: 2,
+            borderColor: theme.colors.success,
+            backgroundColor: theme.colors.secondary,
           }}
-        ></View>
-        <BorderContainer
-          whiteBorder
-          style={{
-            height: 70,
-            width: 70,
-            borderRadius: 35,
-            bottom: 15,
-          }}
-        >
-          <Image
-            source={{
-              uri: user?.imageUrl,
+          resizeMode="cover"
+        />
+      ) : (
+        <LoadingSkeleton
+          height={54}
+          width={54}
+          borderRadius={27}
+          style={{ borderWidth: 2, borderColor: theme.colors.success }}
+        />
+      )}
+      <View style={{ flex: 1, gap: 4 }}>
+        {isLoaded ? (
+          <Text
+            numberOfLines={1}
+            style={{
+              fontSize: 19,
+              lineHeight: 25,
+              fontFamily: "Lexend_600SemiBold",
             }}
-            style={{ height: 70, width: 70, borderRadius: 35 }}
-          />
-        </BorderContainer>
-        <View>
-          <Text style={{ textAlign: "center" }}>Hello {username} 👋</Text>
-          <Text style={{ color: "grey", textAlign: "center" }}>
-            Welcome to your home.
+          >
+            Hello {username} 👋
           </Text>
-        </View>
+        ) : (
+          <LoadingSkeleton height={22} width={158} borderRadius={6} />
+        )}
+        <Text style={{ color: theme.colors.grey2, fontSize: 14 }}>
+          Welcome to your home.
+        </Text>
       </View>
     </View>
   );

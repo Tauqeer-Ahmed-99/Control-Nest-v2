@@ -18,11 +18,7 @@ interface SwitchProps {
  * Toggle switch that reflects its current value and animates user changes.
  */
 const Switch: React.FC<SwitchProps> = ({ value, onChange }) => {
-  const {
-    theme: {
-      colors: { primary, secondary },
-    },
-  } = useTheme();
+  const { theme } = useTheme();
 
   const [animationValue] = useState(
     () => new Animated.Value(value ? 1 : 0),
@@ -52,17 +48,17 @@ const Switch: React.FC<SwitchProps> = ({ value, onChange }) => {
 
   const switchColor = animationValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [secondary, "#52E2C7"],
+    outputRange: [theme.colors.grey5, theme.colors.success],
   });
 
   const circleColor = animationValue.interpolate({
     inputRange: [0, 1],
-    outputRange: [primary, "#3eb9a2"],
+    outputRange: [theme.colors.grey3, theme.colors.background],
   });
 
   const powerIconColor = animationValue.interpolate({
     inputRange: [0, 1],
-    outputRange: ["#a3a3a3", "#ffffff"],
+    outputRange: [theme.colors.background, theme.colors.success],
   });
 
   const iconTranslate = animationValue.interpolate({
@@ -71,7 +67,13 @@ const Switch: React.FC<SwitchProps> = ({ value, onChange }) => {
   });
 
   return (
-    <TouchableWithoutFeedback onPress={toggleSwitch}>
+    <TouchableWithoutFeedback
+      onPress={toggleSwitch}
+      hitSlop={8}
+      accessibilityRole="switch"
+      accessibilityLabel="Power"
+      accessibilityState={{ checked: value }}
+    >
       <Animated.View
         style={[styles.container, { backgroundColor: switchColor }]}
       >

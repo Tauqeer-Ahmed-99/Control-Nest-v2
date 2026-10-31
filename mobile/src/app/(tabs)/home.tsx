@@ -51,8 +51,11 @@ const Home = () => {
       }}
     >
       <UserProfile />
-      <View style={{ paddingHorizontal: 18, flex: 1, paddingBottom: 90 }}>
-        <ScrollView>
+      <View style={{ paddingHorizontal: 18, flex: 1 }}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={{ paddingBottom: 132 }}
+        >
           <Summary />
           <Rooms />
         </ScrollView>

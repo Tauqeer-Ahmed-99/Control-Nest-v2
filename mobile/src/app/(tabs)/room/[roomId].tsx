@@ -1,8 +1,9 @@
 import AvailableRooms from "@/components/available-rooms";
 import DeviceCard from "@/components/device-card";
 import Grid from "@/components/grid";
+import CardGridSkeleton from "@/components/card-grid-skeleton";
 import MessageContainer from "@/components/message-container";
-import { useRoomData } from "@/hooks/use-house";
+import useHouse, { useRoomData } from "@/hooks/use-house";
 import useRemoveRoom from "@/hooks/use-remove-room";
 import useUpdateHeaderTitle from "@/hooks/use-update-header-title";
 import { ApiRoutes } from "@/routes/routes";
@@ -21,6 +22,7 @@ const Room = () => {
     },
   } = useTheme();
   const { roomId } = useLocalSearchParams();
+  const houseQuery = useHouse();
   const room = useRoomData(roomId as string);
   const [isDeleteRoomConfirmationOpen, setIsDeleteRoomConfirmationOpen] =
     useState(false);
@@ -51,17 +53,40 @@ const Room = () => {
   };
 
   const DeleteRoomButton = (
-    <TouchableOpacity onPress={() => setIsDeleteRoomConfirmationOpen(true)}>
+    <TouchableOpacity
+      accessibilityRole="button"
+      accessibilityLabel={`Delete ${room?.name ?? "room"}`}
+      hitSlop={10}
+      onPress={() => setIsDeleteRoomConfirmationOpen(true)}
+      style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+    >
       <MaterialIcons name="delete-outline" size={24} color="white" />
     </TouchableOpacity>
   );
 
   useUpdateHeaderTitle(room?.name ?? "Room", DeleteRoomButton);
 
+  if (houseQuery.isLoading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: primary,
+          paddingHorizontal: 18,
+        }}
+      >
+        <AvailableRooms />
+        <CardGridSkeleton count={4} />
+      </View>
+    );
+  }
+
   if (!room) {
     return (
-      <View>
-        <MessageContainer message="Room with id '{roomId}' not found." />
+      <View style={{ flex: 1, backgroundColor: primary, padding: 18 }}>
+        <MessageContainer
+          message={houseQuery.error?.message ?? `Room with id '${roomId}' not found.`}
+        />
       </View>
     );
   }
@@ -72,11 +97,13 @@ const Room = () => {
         flex: 1,
         backgroundColor: primary,
         paddingHorizontal: 18,
-        paddingBottom: 90,
       }}
     >
       <AvailableRooms />
-      <ScrollView>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 132 }}
+      >
         {room.devices.length > 0 ? (
           <Grid
             items={room.devices}
@@ -116,12 +143,17 @@ const Room = () => {
             }}
           >
             <Button
+              type="clear"
               disabled={isDeletingRoom}
               onPress={() => setIsDeleteRoomConfirmationOpen(false)}
             >
               Cancel
             </Button>
-            <Button loading={isDeletingRoom} onPress={deleteRoom}>
+            <Button
+              color="error"
+              loading={isDeletingRoom}
+              onPress={deleteRoom}
+            >
               Yes
             </Button>
           </View>

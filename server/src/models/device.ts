@@ -2,22 +2,56 @@ import z from "zod";
 import { HeaderPinType, pinHeaderConfig } from "./pin-header-config";
 import { Metadata } from "./metadata";
 
-export const CreateDeviceSchema = z.object({
-  roomId: z.uuidv4().nonempty().nonoptional(),
-  pinNumber: z
-    .number()
-    .int()
-    .refine(
-      (pinNumber) =>
-        pinHeaderConfig.some(
-          (pin) =>
-            pin.type === HeaderPinType.GPIO && pin.gpioPinNumber === pinNumber,
-        ),
-      { message: "Invalid GPIO pin number." },
-    ),
-  deviceName: z.string().nonempty().nonoptional(),
-  wattage: z.number().nonnegative().nonoptional(),
-});
+const isValidPinSelection = (pinNumber: number, gpioPinNumber: number) =>
+  pinHeaderConfig.some(
+    (pin) =>
+      pin.type === HeaderPinType.GPIO &&
+      pin.headerPinNumber === pinNumber &&
+      pin.gpioPinNumber === gpioPinNumber,
+  );
+
+const headerPinNumberSchema = z
+  .number()
+  .int()
+  .refine(
+    (pinNumber) =>
+      pinHeaderConfig.some(
+        (pin) =>
+          pin.type === HeaderPinType.GPIO && pin.headerPinNumber === pinNumber,
+      ),
+    { message: "Invalid header pin number." },
+  );
+
+const gpioPinNumberSchema = z
+  .number()
+  .int()
+  .refine(
+    (gpioPinNumber) =>
+      pinHeaderConfig.some(
+        (pin) =>
+          pin.type === HeaderPinType.GPIO &&
+          pin.gpioPinNumber === gpioPinNumber,
+      ),
+    { message: "Invalid GPIO pin number." },
+  );
+
+export const CreateDeviceSchema = z
+  .object({
+    roomId: z.uuidv4().nonempty().nonoptional(),
+    pinNumber: headerPinNumberSchema,
+    gpioPinNumber: gpioPinNumberSchema,
+    deviceName: z.string().nonempty().nonoptional(),
+    wattage: z.number().nonnegative().nonoptional(),
+  })
+  .superRefine(({ pinNumber, gpioPinNumber }, ctx) => {
+    if (!isValidPinSelection(pinNumber, gpioPinNumber)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["gpioPinNumber"],
+        message: "GPIO pin number does not match the header pin number.",
+      });
+    }
+  });
 
 const TimeSchema = z
   .string()
@@ -47,24 +81,35 @@ export const UpdateDeviceSchema = z
     roomId: z.uuidv4().nonempty().nonoptional(),
     deviceId: z.uuidv4().nonempty().nonoptional(),
     deviceName: z.string().nonempty().optional(),
-    pinNumber: z
-      .number()
-      .int()
-      .refine(
-        (pinNumber) =>
-          pinHeaderConfig.some(
-            (pin) =>
-              pin.type === HeaderPinType.GPIO &&
-              pin.gpioPinNumber === pinNumber,
-          ),
-        { message: "Invalid GPIO pin number." },
-      )
-      .optional(),
+    pinNumber: headerPinNumberSchema.optional(),
+    gpioPinNumber: gpioPinNumberSchema.optional(),
     status: z.boolean().optional(),
     isDefault: z.boolean().optional(),
     wattage: z.number().nonnegative().optional(),
   })
-  .and(ScheduleSchema);
+  .and(ScheduleSchema)
+  .superRefine(({ pinNumber, gpioPinNumber }, ctx) => {
+    if ((pinNumber === undefined) !== (gpioPinNumber === undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["gpioPinNumber"],
+        message: "Header and GPIO pin numbers must be provided together.",
+      });
+      return;
+    }
+
+    if (
+      pinNumber !== undefined &&
+      gpioPinNumber !== undefined &&
+      !isValidPinSelection(pinNumber, gpioPinNumber)
+    ) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["gpioPinNumber"],
+        message: "GPIO pin number does not match the header pin number.",
+      });
+    }
+  });
 
 export const RemoveDeviceSchema = z.object({
   roomId: z.uuidv4().nonempty().nonoptional(),
@@ -82,6 +127,7 @@ export type Device = {
   roomId: string;
   name: string;
   pinNumber: number;
+  gpioPinNumber: number;
   status: boolean;
   isDefault: boolean;
   isScheduled: boolean;

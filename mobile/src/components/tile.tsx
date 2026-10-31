@@ -5,7 +5,7 @@ import { View } from "react-native";
 const Tile = ({ children }: React.PropsWithChildren) => {
   const {
     theme: {
-      colors: { secondary },
+      colors: { secondary, grey5 },
     },
   } = useTheme();
 
@@ -13,9 +13,11 @@ const Tile = ({ children }: React.PropsWithChildren) => {
     <View
       style={{
         backgroundColor: secondary,
-        padding: 16,
-        borderRadius: 12,
-        gap: 12,
+        borderColor: grey5,
+        borderWidth: 1,
+        padding: 18,
+        borderRadius: 18,
+        gap: 14,
       }}
     >
       {children}

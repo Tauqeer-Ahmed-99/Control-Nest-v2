@@ -1,10 +1,9 @@
 import { useZeroconf } from "react-native-zeroconf";
 
 export function useAutoPiDiscovery() {
-  const { services } = useZeroconf({
+  const { services, isScanning } = useZeroconf({
     type: "autopihub",
   });
-
   const devices = services.map((service) => ({
     name: service.name,
     host: service.host,
@@ -13,5 +12,5 @@ export function useAutoPiDiscovery() {
     service,
   }));
 
-  return { devices };
+  return { devices, isScanning };
 }

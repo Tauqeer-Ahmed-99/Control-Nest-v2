@@ -1,48 +1,61 @@
 import { useTheme } from "@rneui/themed";
-import { useEffect, useRef } from "react";
-import { Animated, Easing, StyleSheet } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  Animated,
+  type DimensionValue,
+  Easing,
+  StyleSheet,
+  type StyleProp,
+  type ViewStyle,
+} from "react-native";
 
 const LoadingSkeleton = ({
   height,
   width,
   borderRadius,
   startOpacity,
+  style,
 }: {
   height?: number;
-  width?: number;
+  width?: DimensionValue;
   borderRadius?: number;
   startOpacity?: number;
+  style?: StyleProp<ViewStyle>;
 }) => {
   const {
     theme: {
-      colors: { secondary },
+      colors: { grey5 },
     },
   } = useTheme();
 
-  const fadeAnim = useRef(new Animated.Value(startOpacity ?? 0.3)).current;
+  const lowOpacity = startOpacity ?? 0.72;
+  const [fadeAnim] = useState(() => new Animated.Value(lowOpacity));
 
   useEffect(() => {
-    Animated.loop(
+    const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 1000,
+          toValue: 0.82,
+          duration: 2500,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
         Animated.timing(fadeAnim, {
-          toValue: startOpacity ?? 0.3,
-          duration: 1000,
+          toValue: lowOpacity,
+          duration: 2500,
           easing: Easing.inOut(Easing.quad),
           useNativeDriver: true,
         }),
       ]),
-    ).start();
-  }, [fadeAnim]);
+    );
+    animation.start();
+
+    return () => animation.stop();
+  }, [fadeAnim, lowOpacity]);
 
   const styles = StyleSheet.create({
     skeleton: {
-      backgroundColor: secondary,
+      backgroundColor: grey5,
       borderRadius: 4,
     },
   });
@@ -51,9 +64,17 @@ const LoadingSkeleton = ({
     <Animated.View
       style={[
         styles.skeleton,
-        { height: height ?? 100, width: width ?? "100%", borderRadius },
+        {
+          height: height ?? 100,
+          width: width ?? "100%",
+          borderRadius: borderRadius ?? 8,
+        },
+        style,
         { opacity: fadeAnim },
       ]}
+      accessible={false}
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants"
     />
   );
 };

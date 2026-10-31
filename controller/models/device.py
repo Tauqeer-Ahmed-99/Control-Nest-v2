@@ -9,7 +9,7 @@ class Device:
     room_id: str
     name: str
     status: bool
-    pin_number: int
+    gpio_pin_number: int
     is_default: bool
     is_scheduled: bool
     days_scheduled: str | None
@@ -30,7 +30,7 @@ class Device:
         self.room_id = device.roomId
         self.name = device.name
         self.status = device.status
-        self.pin_number = device.pinNumber
+        self.gpio_pin_number = device.gpioPinNumber
         self.is_default = device.isDefault
         self.is_scheduled = device.isScheduled
         self.days_scheduled =  device.daysScheduled

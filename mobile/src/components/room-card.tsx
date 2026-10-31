@@ -2,7 +2,7 @@ import { useDeviceData } from "@/hooks/use-house";
 import useSwitchDevice from "@/hooks/use-switch-device";
 import { Room } from "@/models/room";
 import { getTypedRoute, Routes } from "@/routes/routes";
-import { Text } from "@rneui/themed";
+import { Text, useTheme } from "@rneui/themed";
 import { router } from "expo-router";
 import React, { useCallback } from "react";
 import { TouchableOpacity, View } from "react-native";
@@ -10,8 +10,10 @@ import Card from "./card";
 import Icon from "./icon";
 
 const RoomCard = ({ room }: { room: Room }) => {
+  const { theme } = useTheme();
   const defaultDevice = useDeviceData(room.id, "default");
   const { mutate: switchDevice } = useSwitchDevice();
+  const activeDeviceCount = room.devices.filter((device) => device.status).length;
 
   const handleOnChange = useCallback(
     (value: boolean) => {
@@ -28,6 +30,9 @@ const RoomCard = ({ room }: { room: Room }) => {
 
   return (
     <TouchableOpacity
+      activeOpacity={0.82}
+      accessibilityRole="button"
+      accessibilityLabel={`${room.name}, ${room.devices.length} devices`}
       onPress={() =>
         router.push(getTypedRoute(Routes.Room.replace("[roomId]", room.id)))
       }
@@ -39,32 +44,46 @@ const RoomCard = ({ room }: { room: Room }) => {
         render={(room) => (
           <View
             style={{
-              paddingTop: 15,
-              height: 150,
+              flex: 1,
+              gap: 12,
               justifyContent: "space-between",
-              alignItems: "center",
             }}
           >
-            <Icon name={room.name as string} />
-            <Text>{room.name}</Text>
             <View
               style={{
-                width: "100%",
                 flexDirection: "row",
-                justifyContent: "space-between",
                 alignItems: "center",
+                gap: 12,
               }}
             >
-              <View style={{ flexDirection: "row", gap: 6 }}>
-                <Text>{room.devices.length}</Text>
-                <Text style={{ color: "grey" }}>Devices</Text>
-              </View>
-              <View style={{ flexDirection: "row", gap: 6 }}>
-                <Text>
-                  {room.devices.filter((device) => device.status).length}
+              <Icon name={room.name as string} />
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text
+                  numberOfLines={2}
+                  style={{ fontSize: 15, fontFamily: "Lexend_600SemiBold" }}
+                >
+                  {room.name}
                 </Text>
-                <Text>ON</Text>
+                <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
+                  {room.devices.length} devices
+                </Text>
               </View>
+            </View>
+            <View style={{ flexDirection: "row", alignItems: "center", gap: 7 }}>
+              <View
+                style={{
+                  width: 7,
+                  height: 7,
+                  borderRadius: 4,
+                  backgroundColor:
+                    activeDeviceCount > 0
+                      ? theme.colors.success
+                      : theme.colors.grey3,
+                }}
+              />
+              <Text style={{ color: theme.colors.grey2, fontSize: 12 }}>
+                {activeDeviceCount} active
+              </Text>
             </View>
           </View>
         )}

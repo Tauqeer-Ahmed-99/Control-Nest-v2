@@ -9,7 +9,7 @@ import useRemoteUrl from "./use-remote-url";
 
 const useApiQuery = <T>(
   url: string,
-  config?: ApiConfig,
+  config?: ApiConfig<T>,
 ): UseQueryResult<T, Error> => {
   const { isSignedIn, getToken } = useAuth();
   const remoteUrl = useRemoteUrl();
@@ -41,6 +41,7 @@ const useApiQuery = <T>(
       return response.json();
     },
     staleTime: config?.queryConfig?.staleTime ?? 1000 * 60 * 5, // 5 minutes stale time or the given one
+    placeholderData: config?.queryConfig?.placeholderData,
     enabled:
       !!baseUrl &&
       isSignedIn &&

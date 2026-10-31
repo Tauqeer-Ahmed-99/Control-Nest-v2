@@ -27,16 +27,16 @@ const DeviceScheduleInfo = ({
   setDevice: React.Dispatch<React.SetStateAction<Device | null>>;
   isError: boolean;
 }) => {
-  const {
-    theme: {
-      colors: { primary, error, white },
-    },
-  } = useTheme();
+  const { theme } = useTheme();
+  const { primary, error, grey3, grey5, success } = theme.colors;
 
   const scheduledDays = useMemo(
     () => getScheduledDays(device?.daysScheduled ?? ""),
     [device],
   );
+  const areAllDaysSelected = scheduledDays.every(Boolean);
+  const selectedDayTextColor =
+    theme.mode === "dark" ? "#10201A" : "#FFFFFF";
 
   const showtimePicker = useCallback((timeFor: "start" | "off") => {
     DateTimePickerAndroid.open({
@@ -104,6 +104,8 @@ const DeviceScheduleInfo = ({
             height: 45,
             width: 80,
             backgroundColor: primary,
+            borderWidth: 1,
+            borderColor: grey5,
             justifyContent: "center",
             alignItems: "center",
             borderRadius: 20,
@@ -130,36 +132,52 @@ const DeviceScheduleInfo = ({
                 marginVertical: 12,
               }}
             >
-              {["All", ...DAYS].map((day, idx) => (
-                <TouchableOpacity
-                  key={day}
-                  // borderless
-                  onPress={() => handleDaysSelection(idx - 1, day)} // idx-1 to ignore "All"
-                  style={{
-                    width: "12.5%",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    height: 40,
-                    borderTopLeftRadius: idx === 0 ? 12 : undefined,
-                    borderBottomLeftRadius: idx === 0 ? 12 : undefined,
-                    borderTopRightRadius: idx === 7 ? 12 : undefined,
-                    borderBottomRightRadius: idx === 7 ? 12 : undefined,
-                    borderRightWidth: 1,
-                    borderLeftWidth: idx === 0 ? 1 : undefined,
-                    borderBottomWidth: 1,
-                    borderTopWidth: 1,
-                    borderColor:
-                      isError && !scheduledDays.some((day) => day)
-                        ? error
-                        : white,
-                    backgroundColor: scheduledDays[idx - 1] // idx-1 to ignore "All"
-                      ? "#3eb9a2"
-                      : undefined,
-                  }}
-                >
-                  <Text>{day}</Text>
-                </TouchableOpacity>
-              ))}
+              {["All", ...DAYS].map((day, idx) => {
+                const isSelected =
+                  idx === 0
+                    ? areAllDaysSelected
+                    : scheduledDays[idx - 1] === true;
+
+                return (
+                  <TouchableOpacity
+                    key={day}
+                    onPress={() => handleDaysSelection(idx - 1, day)}
+                    accessibilityRole="checkbox"
+                    accessibilityState={{ checked: isSelected }}
+                    style={{
+                      width: "12.5%",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      height: 44,
+                      borderTopLeftRadius: idx === 0 ? 12 : undefined,
+                      borderBottomLeftRadius: idx === 0 ? 12 : undefined,
+                      borderTopRightRadius: idx === 7 ? 12 : undefined,
+                      borderBottomRightRadius: idx === 7 ? 12 : undefined,
+                      borderRightWidth: 1,
+                      borderLeftWidth: idx === 0 ? 1 : undefined,
+                      borderBottomWidth: 1,
+                      borderTopWidth: 1,
+                      borderColor:
+                        isError && !scheduledDays.some((day) => day)
+                          ? error
+                          : grey3,
+                      backgroundColor: isSelected ? success : undefined,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: isSelected
+                          ? selectedDayTextColor
+                          : theme.colors.black,
+                        fontSize: 11,
+                        fontFamily: "Lexend_500Medium",
+                      }}
+                    >
+                      {day}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
             </View>
           </View>
           <View
@@ -172,7 +190,7 @@ const DeviceScheduleInfo = ({
               isError && !device?.startTime
                 ? {
                     borderBottomWidth: 1,
-                    borderColor: "#d66464",
+                    borderColor: error,
                   }
                 : undefined,
             ]}
@@ -192,7 +210,7 @@ const DeviceScheduleInfo = ({
               isError && !device?.offTime
                 ? {
                     borderBottomWidth: 1,
-                    borderColor: "#d66464",
+                    borderColor: error,
                   }
                 : undefined,
             ]}

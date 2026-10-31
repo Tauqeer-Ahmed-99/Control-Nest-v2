@@ -21,7 +21,7 @@ const MessageContainer = ({
 const useStyles = () => {
   const {
     theme: {
-      colors: { primary, secondary, grey3 },
+      colors: { secondary, grey2, grey5 },
     },
   } = useTheme();
 
@@ -31,17 +31,18 @@ const useStyles = () => {
       justifyContent: "center",
       alignItems: "center",
       backgroundColor: secondary,
-      borderWidth: 2,
-      borderRadius: 10,
-      borderColor: grey3,
-      borderStyle: "dotted",
-      height: 150,
-      gap: 12,
+      borderWidth: 1,
+      borderRadius: 18,
+      borderColor: grey5,
+      minHeight: 142,
+      gap: 8,
     },
     dottedBox: {
-      padding: 20,
+      paddingHorizontal: 22,
+      paddingVertical: 20,
       textAlign: "center",
-      color: grey3,
+      color: grey2,
+      lineHeight: 21,
     },
   });
 };

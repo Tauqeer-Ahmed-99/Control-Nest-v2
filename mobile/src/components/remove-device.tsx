@@ -48,12 +48,7 @@ const RemoveDevice = () => {
       <Tile>
         <Button
           type="outline"
-          color="success"
-          containerStyle={{
-            borderRadius: 6,
-            borderWidth: 1,
-            borderColor: error,
-          }}
+          color="error"
           titleStyle={{ color: error }}
           onPress={() => setIsConfirmationOpen(true)}
         >

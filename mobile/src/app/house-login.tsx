@@ -1,5 +1,6 @@
 import Header from "@/components/header";
 import InputField from "@/components/input-field";
+import LoadingSkeleton from "@/components/loading-skeleton";
 import {
   CONTROLLER_DEVICE_CONFIG,
   CONTROLLER_DEVICE_PASSWORDS,
@@ -21,6 +22,9 @@ import { useRouter } from "expo-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
   StyleSheet,
   ToastAndroid,
   TouchableOpacity,
@@ -29,7 +33,7 @@ import {
 
 const HouseLogin = () => {
   const { userId, getToken } = useAuth();
-  const { devices } = useAutoPiDiscovery();
+  const { devices, isScanning } = useAutoPiDiscovery();
   const [device, setDevice] = useState<(typeof devices)[number] | null>(null);
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -71,7 +75,7 @@ const HouseLogin = () => {
 
   const {
     theme: {
-      colors: { grey2, grey3, grey5, secondary },
+      colors: { grey2, grey3, grey5, secondary, success, warning },
     },
   } = useTheme();
 
@@ -214,25 +218,13 @@ const HouseLogin = () => {
     setStep("controller");
   }, []);
 
-  if (isLoading) {
+  if (isLoading || isHealthy) {
     return (
       <View style={styles.container}>
         <View style={styles.content}>
-          {/* Header skeleton */}
-          <View
-            style={{
-              height: 28,
-              width: 220,
-              borderRadius: 6,
-              backgroundColor: grey3,
-              marginTop: 16,
-              marginBottom: 20,
-            }}
-          />
-
-          {/* Device card skeletons */}
+          <Header heading="Available Devices" />
           <View style={styles.deviceList}>
-            {[1, 2, 3].map((item) => (
+            {[0, 1, 2].map((item) => (
               <View
                 key={item}
                 style={[
@@ -243,155 +235,38 @@ const HouseLogin = () => {
                     borderWidth: 1,
                   },
                 ]}
+                accessible={false}
+                accessibilityElementsHidden
               >
-                {/* Device icon */}
-                <View
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 14,
-                    backgroundColor: grey3,
-                  }}
-                />
-
-                {/* Device information */}
+                <LoadingSkeleton height={48} width={48} borderRadius={14} />
                 <View style={styles.deviceInfo}>
-                  <View
-                    style={{
-                      height: 16,
-                      width: item === 2 ? "65%" : "75%",
-                      borderRadius: 5,
-                      backgroundColor: grey3,
-                    }}
+                  <LoadingSkeleton
+                    height={14}
+                    width={item === 1 ? "64%" : "76%"}
+                    borderRadius={5}
                   />
-
                   <View style={styles.deviceAddressRow}>
-                    <View
-                      style={{
-                        width: 13,
-                        height: 13,
-                        borderRadius: 7,
-                        backgroundColor: grey3,
-                      }}
-                    />
-
-                    <View
-                      style={{
-                        height: 12,
-                        width: "85%",
-                        borderRadius: 4,
-                        backgroundColor: grey3,
-                      }}
-                    />
+                    <LoadingSkeleton height={13} width={13} borderRadius={7} />
+                    <LoadingSkeleton height={11} width="82%" borderRadius={5} />
                   </View>
-
                   <View style={styles.deviceStatusRow}>
-                    <View
-                      style={{
-                        width: 7,
-                        height: 7,
-                        borderRadius: 4,
-                        backgroundColor: grey3,
-                      }}
-                    />
-
-                    <View
-                      style={{
-                        height: 12,
-                        width: 90,
-                        borderRadius: 4,
-                        backgroundColor: grey3,
-                      }}
-                    />
+                    <LoadingSkeleton height={7} width={7} borderRadius={4} />
+                    <LoadingSkeleton height={11} width={88} borderRadius={5} />
                   </View>
                 </View>
-
-                {/* Selection indicator */}
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    backgroundColor: grey3,
-                  }}
-                />
+                <LoadingSkeleton height={22} width={22} borderRadius={11} />
               </View>
             ))}
-          </View>
-        </View>
-
-        {/* Bottom-sheet form skeleton */}
-        <View style={styles.bottomSheet}>
-          <View
-            style={{
-              paddingVertical: 12,
-              paddingHorizontal: 24,
-              width: "100%",
-            }}
-          >
-            {/* Sheet header */}
-            <View style={styles.header}>
-              <View
-                style={{
-                  width: 140,
-                  height: 28,
-                  borderRadius: 6,
-                  backgroundColor: grey3,
-                }}
-              />
-
-              <View
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 12,
-                  backgroundColor: grey3,
-                }}
-              />
-            </View>
-
-            {/* Input skeleton */}
-            <View style={{ width: "100%", alignItems: "center" }}>
-              <View style={{ width: "100%", marginBottom: 24 }}>
-                <View
-                  style={{
-                    height: 14,
-                    width: 160,
-                    borderRadius: 4,
-                    backgroundColor: grey3,
-                    marginBottom: 10,
-                  }}
-                />
-
-                <View
-                  style={{
-                    width: "100%",
-                    height: 52,
-                    borderRadius: 10,
-                    backgroundColor: grey3,
-                  }}
-                />
-              </View>
-
-              {/* Button skeleton */}
-              <View
-                style={{
-                  width: 240,
-                  height: 48,
-                  borderRadius: 25,
-                  backgroundColor: grey3,
-                  marginBottom: 24,
-                }}
-              />
-            </View>
           </View>
         </View>
       </View>
     );
   }
-
   return (
-    <View style={styles.container}>
+    <KeyboardAvoidingView
+      style={styles.container}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
       <View style={styles.content}>
         <Header heading="Available Devices" />
         <FlatList
@@ -412,7 +287,7 @@ const HouseLogin = () => {
                   styles.deviceCard,
                   {
                     backgroundColor: secondary,
-                    borderColor: isSelected ? "#3e31ab" : grey5,
+                    borderColor: isSelected ? success : grey5,
                     borderWidth: isSelected ? 2 : 1,
                   },
                 ]}
@@ -421,7 +296,7 @@ const HouseLogin = () => {
                   <Feather
                     name="cpu"
                     size={24}
-                    color={isSelected ? "#3e31ab" : grey2}
+                    color={isSelected ? success : grey2}
                   />
                 </View>
 
@@ -447,7 +322,7 @@ const HouseLogin = () => {
                       style={[
                         styles.statusDot,
                         {
-                          backgroundColor: configured ? "#16a34a" : "#d97706",
+                          backgroundColor: configured ? success : warning,
                         },
                       ]}
                     />
@@ -456,7 +331,7 @@ const HouseLogin = () => {
                       style={[
                         styles.deviceStatus,
                         {
-                          color: configured ? "#16a34a" : "#d97706",
+                          color: configured ? success : warning,
                         },
                       ]}
                     >
@@ -469,37 +344,80 @@ const HouseLogin = () => {
                   <Feather
                     name={isSelected ? "check-circle" : "chevron-right"}
                     size={22}
-                    color={isSelected ? "#3e31ab" : grey3}
+                    color={isSelected ? success : grey3}
                   />
                 </View>
               </TouchableOpacity>
             );
           }}
           ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <View style={styles.emptyIcon}>
-                <Feather name="wifi" size={30} color={grey2} />
+            isScanning ? (
+              <View style={{ gap: 12 }}>
+                <Text style={{ color: grey2, fontSize: 13 }}>
+                  Searching for AutoPi Hub
+                </Text>
+                <View
+                  style={{ gap: 12 }}
+                  accessible={false}
+                  accessibilityElementsHidden
+                >
+                  {[0, 1, 2].map((item) => (
+                    <View
+                      key={item}
+                      style={[
+                        styles.deviceCard,
+                        {
+                          backgroundColor: secondary,
+                          borderColor: grey5,
+                          borderWidth: 1,
+                        },
+                      ]}
+                    >
+                      <LoadingSkeleton height={48} width={48} borderRadius={14} />
+                      <View style={styles.deviceInfo}>
+                        <LoadingSkeleton height={14} width="72%" borderRadius={5} />
+                        <View style={styles.deviceAddressRow}>
+                          <LoadingSkeleton height={13} width={13} borderRadius={7} />
+                          <LoadingSkeleton height={11} width="82%" borderRadius={5} />
+                        </View>
+                        <View style={styles.deviceStatusRow}>
+                          <LoadingSkeleton height={7} width={7} borderRadius={4} />
+                          <LoadingSkeleton height={11} width={88} borderRadius={5} />
+                        </View>
+                      </View>
+                      <LoadingSkeleton height={22} width={22} borderRadius={11} />
+                    </View>
+                  ))}
+                </View>
               </View>
+            ) : (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Feather name="wifi" size={30} color={grey2} />
+                </View>
 
-              <Text style={styles.emptyTitle}>Searching for AutoPi Hub</Text>
+                <Text style={styles.emptyTitle}>No AutoPi Hub found</Text>
 
-              <Text style={[styles.emptyDescription, { color: grey2 }]}>
-                Make sure your controller is powered on and connected to the
-                same Wi-Fi network.
-              </Text>
-            </View>
+                <Text style={[styles.emptyDescription, { color: grey2 }]}>
+                  Make sure your controller is powered on and connected to the
+                  same Wi-Fi network.
+                </Text>
+              </View>
+            )
           }
         />
       </View>
 
       {Boolean(device) && (
         <View style={styles.bottomSheet}>
-          <View
-            style={{
+          <ScrollView
+            style={{ flex: 1, width: "100%" }}
+            contentContainerStyle={{
+              flexGrow: 1,
               paddingVertical: 12,
               paddingHorizontal: 24,
-              width: "100%",
             }}
+            keyboardShouldPersistTaps="handled"
           >
             <View style={styles.header}>
               <Text
@@ -510,7 +428,13 @@ const HouseLogin = () => {
               >
                 {isConfigured ? "Connect" : "Configure"}
               </Text>
-              <TouchableOpacity onPress={closeDevice}>
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel="Close controller setup"
+                hitSlop={10}
+                onPress={closeDevice}
+                style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+              >
                 <Feather name="x" size={24} color={grey3} />
               </TouchableOpacity>
             </View>
@@ -520,14 +444,14 @@ const HouseLogin = () => {
                   style={[
                     styles.stepCircle,
                     {
-                      backgroundColor: "#3e31ab",
-                      borderColor: "#3e31ab",
+                      backgroundColor: success,
+                      borderColor: success,
                     },
                   ]}
                 >
                   <Text style={styles.stepNumber}>1</Text>
                 </View>
-                <Text style={[styles.stepLabel, { color: "#3e31ab" }]}>
+                <Text style={[styles.stepLabel, { color: success }]}>
                   Controller
                 </Text>
               </View>
@@ -535,7 +459,7 @@ const HouseLogin = () => {
                 style={[
                   styles.stepLine,
                   {
-                    backgroundColor: step === "password" ? "#3e31ab" : grey5,
+                    backgroundColor: step === "password" ? success : grey5,
                   },
                 ]}
               />
@@ -545,17 +469,24 @@ const HouseLogin = () => {
                     styles.stepCircle,
                     {
                       backgroundColor:
-                        step === "password" ? "#3e31ab" : secondary,
-                      borderColor: step === "password" ? "#3e31ab" : grey5,
+                        step === "password" ? success : secondary,
+                      borderColor: step === "password" ? success : grey5,
                     },
                   ]}
                 >
-                  <Text style={styles.stepNumber}>2</Text>
+                  <Text
+                    style={[
+                      styles.stepNumber,
+                      step !== "password" && styles.inactiveStepNumber,
+                    ]}
+                  >
+                    2
+                  </Text>
                 </View>
                 <Text
                   style={[
                     styles.stepLabel,
-                    { color: step === "password" ? "#3e31ab" : grey3 },
+                    { color: step === "password" ? success : grey3 },
                   ]}
                 >
                   Password
@@ -601,25 +532,22 @@ const HouseLogin = () => {
                 />
               )}
             </View>
-          </View>
+          </ScrollView>
         </View>
       )}
-    </View>
+    </KeyboardAvoidingView>
   );
 };
 
 export default HouseLogin;
 
 const useStyles = () => {
-  const {
-    theme: {
-      colors: { primary, secondary },
-    },
-  } = useTheme();
+  const { theme } = useTheme();
+  const { primary, secondary, success } = theme.colors;
 
   return StyleSheet.create({
     container: {
-      height: "100%",
+      flex: 1,
       backgroundColor: primary,
     },
     content: {
@@ -637,14 +565,19 @@ const useStyles = () => {
       flexDirection: "row",
       alignItems: "center",
       padding: 16,
-      borderRadius: 16,
+      borderRadius: 18,
+      borderWidth: 1,
+      borderColor: theme.colors.grey5,
       gap: 14,
     },
     deviceIcon: {
       width: 48,
       height: 48,
       borderRadius: 14,
-      backgroundColor: "rgba(62, 49, 171, 0.10)",
+      backgroundColor:
+        theme.mode === "dark"
+          ? "rgba(104, 212, 181, 0.14)"
+          : "rgba(18, 107, 91, 0.10)",
       alignItems: "center",
       justifyContent: "center",
     },
@@ -715,6 +648,7 @@ const useStyles = () => {
     bottomSheet: {
       backgroundColor: secondary,
       height: "auto",
+      maxHeight: "90%",
       width: "100%",
       borderTopLeftRadius: 24,
       borderTopRightRadius: 24,
@@ -755,9 +689,15 @@ const useStyles = () => {
       justifyContent: "center",
     },
     stepNumber: {
-      color: "#fff",
+      color: theme.mode === "dark" ? "#10201A" : "#FFFFFF",
       fontSize: 12,
       fontFamily: "Lexend_600SemiBold",
+    },
+    inactiveStepNumber: {
+      color: theme.colors.grey2,
+    },
+    passwordIcon: {
+      color: theme.colors.grey2,
     },
     stepLabel: {
       fontSize: 12,
@@ -773,22 +713,23 @@ const useStyles = () => {
     button: {
       width: 240,
       borderRadius: 25,
-      backgroundColor: "#3e31ab",
+      backgroundColor: success,
     },
     passwordButton: {
       width: 190,
       borderRadius: 25,
-      backgroundColor: "#3e31ab",
+      backgroundColor: success,
     },
     buttonContainer: {
-      elevation: 20,
       borderRadius: 25,
-      shadowColor: "#3e31ab",
       marginBottom: 24,
     },
-    buttonTitle: { fontFamily: "Lexend_400Regular" },
+    buttonTitle: {
+      fontFamily: "Lexend_600SemiBold",
+      color: theme.mode === "dark" ? "#10201A" : "#FFFFFF",
+    },
     backButtonTitle: {
-      color: "#ffffff",
+      color: success,
       fontFamily: "Lexend_500Medium",
     },
   });
@@ -881,7 +822,7 @@ const ControllerPasswordStep = ({
         >
           <Feather
             name={isPasswordVisible ? "eye-off" : "eye"}
-            color="#6e6b8c"
+            color={styles.passwordIcon.color}
             size={20}
           />
         </TouchableOpacity>
