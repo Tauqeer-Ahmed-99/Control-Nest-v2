@@ -83,6 +83,7 @@ const controllerIdFromInput = (input: unknown) => {
 
 export const withRequestObservability = <T extends (request: NextRequest) => Promise<Response> | Response>(
   handler: T,
+  { record = true }: { record?: boolean } = {},
 ): T =>
   (async (request: NextRequest) => {
     const suppliedRequestId = request.headers.get(REQUEST_ID_HEADER) ?? "";
@@ -92,7 +93,7 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
     const startedAt = performance.now();
 
     return runWithRequestContext({ requestId }, async () => {
-      const input = await getInput(request);
+      const input = record ? await getInput(request) : null;
       let response: Response;
 
       try {
@@ -106,6 +107,8 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
       }
 
       response.headers.set(REQUEST_ID_HEADER, requestId);
+      if (!record) return response;
+
       const output = {
         headers: redact(
           Object.fromEntries(

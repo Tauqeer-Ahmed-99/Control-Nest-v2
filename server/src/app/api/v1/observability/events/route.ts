@@ -24,4 +24,4 @@ export const POST = withRequestObservability(async (req: NextRequest) => {
   } catch (error) {
     return APIResponse.fromError(error);
   }
-});
+}, { record: false });

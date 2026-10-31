@@ -12,12 +12,19 @@ interface SwitchProps {
   /** Current value; external updates are reflected by the control. */
   value: boolean;
   onChange: (value: boolean) => void;
+  disabled?: boolean;
+  accessibilityLabel?: string;
 }
 
 /**
  * Toggle switch that reflects its current value and animates user changes.
  */
-const Switch: React.FC<SwitchProps> = ({ value, onChange }) => {
+const Switch: React.FC<SwitchProps> = ({
+  value,
+  onChange,
+  disabled = false,
+  accessibilityLabel = "Power",
+}) => {
   const { theme } = useTheme();
 
   const [animationValue] = useState(
@@ -69,13 +76,17 @@ const Switch: React.FC<SwitchProps> = ({ value, onChange }) => {
   return (
     <TouchableWithoutFeedback
       onPress={toggleSwitch}
+      disabled={disabled}
       hitSlop={8}
       accessibilityRole="switch"
-      accessibilityLabel="Power"
-      accessibilityState={{ checked: value }}
+      accessibilityLabel={accessibilityLabel}
+      accessibilityState={{ checked: value, disabled }}
     >
       <Animated.View
-        style={[styles.container, { backgroundColor: switchColor }]}
+        style={[
+          styles.container,
+          { backgroundColor: switchColor, opacity: disabled ? 0.5 : 1 },
+        ]}
       >
         <Animated.View
           style={[

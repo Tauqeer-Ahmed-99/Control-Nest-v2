@@ -1,6 +1,5 @@
-import { useTheme } from "@rneui/themed";
+import { Text, useTheme } from "@rneui/themed";
 import { useWindowDimensions, View } from "react-native";
-import { Text } from "@rneui/themed";
 import Switch from "./switch";
 
 function Card<T>({
@@ -8,11 +7,13 @@ function Card<T>({
   render,
   value,
   onChange,
+  powerEnabled = true,
 }: {
   item: T;
   render: (item: T) => React.ReactNode;
   value: boolean;
   onChange: (value: boolean) => void;
+  powerEnabled?: boolean;
 }) {
   const { theme } = useTheme();
   const { width } = useWindowDimensions();
@@ -46,14 +47,21 @@ function Card<T>({
       >
         <Text
           style={{
-            color: theme.colors.grey2,
+            color: powerEnabled ? theme.colors.grey2 : theme.colors.warning,
             fontSize: 13,
             fontFamily: "Lexend_500Medium",
           }}
         >
-          Power
+          {powerEnabled ? "Power" : "No device"}
         </Text>
-        <Switch value={value} onChange={onChange} />
+        <Switch
+          value={value}
+          onChange={onChange}
+          disabled={!powerEnabled}
+          accessibilityLabel={
+            powerEnabled ? "Power" : "Power unavailable, no device added"
+          }
+        />
       </View>
     </View>
   );

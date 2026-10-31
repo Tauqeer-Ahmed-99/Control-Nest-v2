@@ -41,6 +41,7 @@ const RoomCard = ({ room }: { room: Room }) => {
         item={room}
         value={defaultDevice?.status ?? false}
         onChange={defaultDevice ? handleOnChange : () => {}}
+        powerEnabled={Boolean(defaultDevice)}
         render={(room) => (
           <View
             style={{
