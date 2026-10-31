@@ -1,3 +1,4 @@
+import ipaddress
 import socket
 import json
 
@@ -9,6 +10,25 @@ from services.controller_config import ControllerConfigService
 SERVICE_TYPE = "_autopihub._tcp.local."
 
 def get_local_ip() -> str:
+    # Prefer the address the system hostname resolves to. The default-route
+    # probe below can select a different interface when the controller has
+    # more than one network address (for example, Ethernet and Wi-Fi).
+    try:
+        hostname_addresses = socket.getaddrinfo(
+            socket.gethostname(), None, socket.AF_INET, socket.SOCK_DGRAM
+        )
+    except socket.gaierror:
+        hostname_addresses = []
+
+    for address in hostname_addresses:
+        candidate = ipaddress.IPv4Address(address[4][0])
+        if (
+            candidate.is_private
+            and not candidate.is_loopback
+            and not candidate.is_link_local
+        ):
+            return str(candidate)
+
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
         sock.connect(("192.0.2.1", 80))
         return sock.getsockname()[0]

@@ -1269,7 +1269,7 @@ const SignIn = ({
           <>
             <InputField
               containerStyle={styles.inputField}
-              label="Email address"
+              label="Email address *"
               value={emailAddress}
               placeholder="you@example.com"
               autoCapitalize="none"
@@ -1283,7 +1283,7 @@ const SignIn = ({
 
             <InputField
               containerStyle={styles.inputField}
-              label="Password"
+              label="Password *"
               value={password}
               placeholder="Enter password"
               autoCapitalize="none"
@@ -1469,7 +1469,9 @@ const SignIn = ({
             <InputField
               containerStyle={styles.inputField}
               label={
-                mfaStrategy === "backup_code" ? "Backup code" : "Verification code"
+                mfaStrategy === "backup_code"
+                  ? "Backup code"
+                  : "Verification code"
               }
               value={code}
               placeholder={

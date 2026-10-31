@@ -22,9 +22,9 @@ npm run android
 From the `mobile` directory, run:
 
 ```powershell
-npx expo prebuild --platform android
-cd android
-.\gradlew.bat assembleRelease
+    npx expo prebuild --platform android
+    cd android
+    .\gradlew.bat assembleRelease
 ```
 
 This builds the Android `release` variant using the release signing configuration in the native Gradle project. The APK is written to `android\app\build\outputs\apk\release\app-release.apk`.

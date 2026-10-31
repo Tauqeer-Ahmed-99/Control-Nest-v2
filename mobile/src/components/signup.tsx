@@ -3,12 +3,7 @@ import { useSignUp } from "@clerk/expo";
 import Feather from "@expo/vector-icons/Feather";
 import { Button, Text, useTheme } from "@rneui/themed";
 import React, { useCallback, useState } from "react";
-import {
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
 import InputField from "./input-field";
 
 const SignUp = ({ prevStep }: { prevStep: () => void }) => {
@@ -28,14 +23,23 @@ const SignUp = ({ prevStep }: { prevStep: () => void }) => {
   const [error, setError] = useState("");
 
   const onSignUpPress = useCallback(async () => {
+    const trimmedFirstName = firstName.trim();
+    const trimmedLastName = lastName.trim();
+
+    if (!trimmedFirstName || !trimmedLastName) {
+      setError("First name and last name are required.");
+      return;
+    }
+
+    setError("");
     setIsLoading(true);
 
     const { data, error } = await tryCatch(
       signUp.password({
         emailAddress: emailAddress.trim(),
         password,
-        firstName: firstName.trim() || undefined,
-        lastName: lastName.trim() || undefined,
+        firstName: trimmedFirstName,
+        lastName: trimmedLastName,
       }),
     );
 
@@ -122,26 +126,32 @@ const SignUp = ({ prevStep }: { prevStep: () => void }) => {
             <View style={styles.nameFields}>
               <InputField
                 containerStyle={styles.nameField}
-                label="First name"
+                label="First name *"
                 value={firstName}
                 placeholder="First name"
                 autoCapitalize="words"
-                onChangeText={setFirstName}
+                onChangeText={(value) => {
+                  setFirstName(value);
+                  setError("");
+                }}
                 disabled={isLoading}
               />
               <InputField
                 containerStyle={styles.nameField}
-                label="Last name"
+                label="Last name *"
                 value={lastName}
                 placeholder="Last name"
                 autoCapitalize="words"
-                onChangeText={setLastName}
+                onChangeText={(value) => {
+                  setLastName(value);
+                  setError("");
+                }}
                 disabled={isLoading}
               />
             </View>
             <InputField
               containerStyle={styles.inputField}
-              label="Email address"
+              label="Email address *"
               autoCapitalize="none"
               value={emailAddress}
               placeholder="you@example.com"
@@ -151,7 +161,7 @@ const SignUp = ({ prevStep }: { prevStep: () => void }) => {
             />
             <InputField
               containerStyle={styles.inputField}
-              label="Password"
+              label="Password *"
               value={password}
               placeholder="Enter password"
               autoCapitalize="none"
