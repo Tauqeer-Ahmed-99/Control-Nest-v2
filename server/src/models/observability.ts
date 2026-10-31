@@ -12,6 +12,7 @@ export const ControllerObservabilityEventSchema = z.object({
   output: z.unknown().optional(),
   error: z.unknown().optional(),
   controllerDeviceId: z.uuidv4().nullable().optional(),
+  createdAt: z.iso.datetime({ offset: true }).optional(),
 });
 
 export type ControllerObservabilityEvent = z.infer<

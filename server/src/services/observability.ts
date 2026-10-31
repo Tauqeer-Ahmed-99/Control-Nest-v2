@@ -27,6 +27,7 @@ export const recordControllerObservabilityEvent = async (
       .values({
         id: event.id,
         requestId: event.requestId,
+        createdAt: event.createdAt ? new Date(event.createdAt) : undefined,
         source: event.source,
         method: event.method,
         path: event.path,

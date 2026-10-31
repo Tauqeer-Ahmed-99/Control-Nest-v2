@@ -90,6 +90,7 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
     const requestId = UUID_PATTERN.test(suppliedRequestId)
       ? suppliedRequestId
       : randomUUID();
+    const createdAt = new Date();
     const startedAt = performance.now();
 
     return runWithRequestContext({ requestId }, async () => {
@@ -123,6 +124,7 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
       const event = {
         id: randomUUID(),
         requestId,
+        createdAt,
         source: "server",
         method: request.method,
         path: new URL(request.url).pathname,

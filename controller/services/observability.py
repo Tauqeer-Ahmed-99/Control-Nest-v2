@@ -118,6 +118,7 @@ class ObservabilityMiddleware:
         status_code = 500
         response_started = False
         caught_error: Exception | None = None
+        created_at = datetime.now(timezone.utc)
         started_at = time.perf_counter()
         context_token = REQUEST_ID_CONTEXT.set(request_id)
 
@@ -242,7 +243,7 @@ class ObservabilityMiddleware:
                     "controllerDeviceId": self.config_service.get(
                         "controllerDevice", "id"
                     ),
-                    "createdAt": datetime.now(timezone.utc).isoformat(),
+                    "createdAt": created_at.isoformat(),
                 }
                 _append_event(event)
                 await asyncio.to_thread(self.api_service.push_observability_event, event)

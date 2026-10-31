@@ -5,6 +5,7 @@ import tryCatch from "@/utils/try-catch";
 type ServerObservabilityEvent = {
   id: string;
   requestId: string;
+  createdAt: Date;
   source: string;
   method: string;
   path: string;
