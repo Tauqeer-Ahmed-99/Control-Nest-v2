@@ -69,11 +69,13 @@ export const removeRoom = async (
       throw new APIError({ message: "Error while removing room." });
     }
 
-    await removePhysicalDevice(
-      txn,
-      removedDevices.map((d) => d.id),
-      accessToken,
-    );
+    if (removedDevices.length > 0) {
+      await removePhysicalDevice(
+        txn,
+        removedDevices.map((d) => d.id),
+        accessToken,
+      );
+    }
 
     return { ...removedRoom, devices: removedDevices };
   });
