@@ -1,47 +1,49 @@
 {
   "expo": {
-    "name": "cnm",
+    "name": "Control Nest",
     "slug": "cnm",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/icon/icon.png",
     "scheme": "cnm",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon",
       "infoPlist": {
-        "NSBonjourServices": ["_http._tcp"],
-        "NSLocalNetworkUsageDescription": "This app uses the local network to discover devices."
+        "CFBundleDisplayName": "Control Nest",
+        "NSBonjourServices": ["_autopihub._tcp"],
+        "NSLocalNetworkUsageDescription": "Control Nest uses the local network to discover AutoPi controllers on your Wi-Fi network."
       }
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#0D1633",
+        "foregroundImage": "./assets/icon/icon.png"
       },
       "predictiveBackGestureEnabled": false,
       "permissions": [
-        "android.permission.ACCESS_LOCAL_NETWORK",
-        "android.permission.NEARBY_WIFI_DEVICES"
+        "android.permission.ACCESS_LOCAL_NETWORK"
       ],
       "package": "com.tauqeerahmed.cnm"
     },
     "web": {
       "output": "static",
-      "favicon": "./assets/images/favicon.png"
+      "favicon": "./assets/icon/icon.png"
     },
     "plugins": [
       "expo-router",
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#208AEF",
-          "image": "./assets/images/splash-icon.png",
-          "imageWidth": 76
+          "backgroundColor": "#F3F7F5",
+          "dark": {
+            "backgroundColor": "#101817",
+            "image": "./assets/icon/icon.png"
+          },
+          "image": "./assets/icon/icon.png",
+          "imageWidth": 120
         }
       ],
+      "./plugins/with-android-local-network",
       "expo-font",
       "expo-secure-store",
       "@clerk/expo",

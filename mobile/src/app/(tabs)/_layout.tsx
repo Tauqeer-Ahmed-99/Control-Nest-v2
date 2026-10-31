@@ -53,11 +53,11 @@ const TabsLayout = () => {
             }}
           />
           <Stack.Screen
-            name="notifications"
+            name="activity"
             options={{
               headerShown: true,
               headerTintColor: theme.colors.black,
-              headerTitle: "Notifications",
+              headerTitle: "Activity Center",
               headerTitleAlign: "center",
               headerShadowVisible: false,
               headerTitleStyle: {

@@ -33,7 +33,7 @@ import {
 
 const HouseLogin = () => {
   const { userId, getToken } = useAuth();
-  const { devices, isScanning } = useAutoPiDiscovery();
+  const { devices, isScanning, permissionDenied } = useAutoPiDiscovery();
   const [device, setDevice] = useState<(typeof devices)[number] | null>(null);
   const [name, setName] = useState("");
   const [password, setPassword] = useState("");
@@ -351,7 +351,18 @@ const HouseLogin = () => {
             );
           }}
           ListEmptyComponent={
-            isScanning ? (
+            permissionDenied ? (
+              <View style={styles.emptyState}>
+                <View style={styles.emptyIcon}>
+                  <Feather name="wifi-off" size={30} color={grey2} />
+                </View>
+                <Text style={styles.emptyTitle}>Permission needed</Text>
+                <Text style={[styles.emptyDescription, { color: grey2 }]}>
+                  Allow Local Network access in your device settings to
+                  discover AutoPi controllers on your Wi-Fi network.
+                </Text>
+              </View>
+            ) : isScanning ? (
               <View style={{ gap: 12 }}>
                 <Text style={{ color: grey2, fontSize: 13 }}>
                   Searching for AutoPi Hub
@@ -710,9 +721,25 @@ const useStyles = () => {
       alignItems: "center",
       gap: 4,
     },
+    controllerDetailsForm: {
+      width: "100%",
+      alignItems: "stretch",
+      gap: 16,
+    },
+    controllerNameInput: {
+      width: "100%",
+      marginHorizontal: 0,
+      marginBottom: 0,
+      paddingHorizontal: 0,
+    },
+    continueButtonContainer: {
+      width: "100%",
+      borderRadius: 14,
+      marginBottom: 0,
+    },
     button: {
-      width: 240,
-      borderRadius: 25,
+      width: "100%",
+      borderRadius: 14,
       backgroundColor: success,
     },
     passwordButton: {
@@ -754,26 +781,27 @@ const ControllerDetailsStep = ({
   onNameChange,
   onContinue,
 }: ControllerDetailsStepProps) => (
-  <>
+  <View style={styles.controllerDetailsForm}>
     <InputField
       disabled={isConfigured}
       label="Controller Device Name"
       placeholder="Enter recognizable name..."
       value={name}
       onChangeText={onNameChange}
+      containerStyle={styles.controllerNameInput}
     />
     <Button
       size="lg"
       buttonStyle={styles.button}
       titleStyle={styles.buttonTitle}
-      containerStyle={styles.buttonContainer}
+      containerStyle={styles.continueButtonContainer}
       loading={isSaving}
       disabled={!name.trim() || isSaving}
       onPress={onContinue}
     >
       Continue
     </Button>
-  </>
+  </View>
 );
 
 type ControllerPasswordStepProps = {

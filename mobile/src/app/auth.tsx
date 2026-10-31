@@ -1,11 +1,11 @@
-import NMTLogo from "@/assets/svgs/nmt-logo.svg";
-import NMTTextLogo from "@/components/nmt-text-logo";
+import AppIcon from "@/assets/icon/icon.png";
 import SignIn from "@/components/signin";
 import SignUp from "@/components/signup";
 import { Button, useTheme } from "@rneui/themed";
 import { StatusBar as ExpoStatusBar } from "expo-status-bar";
 import { useState } from "react";
 import {
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -59,8 +59,15 @@ export default function Auth() {
           style={theme.mode === "dark" ? "light" : "dark"}
           animated
         />
-        <NMTLogo height={120} width={120} />
-        <NMTTextLogo />
+        {/* <NMTLogo height={120} width={120} /> */}
+        <Image
+          source={AppIcon}
+          resizeMode="contain"
+          style={{ width: 144, height: 144 }}
+          accessibilityLabel="Control Nest app icon"
+        />
+        <Text style={styles.appName}>Control Nest</Text>
+        <Text style={styles.companyCredit}>Built by NMT Solutions</Text>
         <Text style={styles.heading}>Home Automation System</Text>
       </View>
       <View style={[styles.bottomSheet, step !== 0 && styles.authSheet]}>
@@ -102,6 +109,17 @@ const useStyles = () => {
       color: theme.colors.black,
       fontSize: 18,
       fontFamily: "Lexend_400Regular",
+    },
+    appName: {
+      color: theme.colors.black,
+      fontSize: 24,
+      fontFamily: "Lexend_600SemiBold",
+    },
+    companyCredit: {
+      color: theme.colors.grey2,
+      fontSize: 11,
+      fontFamily: "Lexend_400Regular",
+      marginTop: -16,
     },
     bottomSheet: {
       backgroundColor: theme.colors.secondary,

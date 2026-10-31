@@ -29,9 +29,9 @@ const bottomNavItems = [
   { name: "devices", label: "Devices", path: "/devices" },
   { name: "create", label: "Create", path: "/create" },
   {
-    name: "notifications",
+    name: "activity",
     label: "Activity",
-    path: "/notifications",
+    path: "/activity",
   },
   { name: "settings", label: "Settings", path: "/settings" },
 ] as const;
@@ -83,12 +83,17 @@ const BottomNavigation = ({
   const useAndroidBlur = Platform.OS === "android";
   const hasTranslucentMaterial = useNativeGlass || useAndroidBlur;
 
-  const renderIcon = (name: (typeof bottomNavItems)[number]["name"], color: string) => {
+  const renderIcon = (
+    name: (typeof bottomNavItems)[number]["name"],
+    color: string,
+  ) => {
     switch (name) {
       case "home":
         return <MaterialIcons name="home-filled" size={22} color={color} />;
       case "devices":
-        return <MaterialCommunityIcons name="devices" size={22} color={color} />;
+        return (
+          <MaterialCommunityIcons name="devices" size={22} color={color} />
+        );
       case "create":
         return (
           <MaterialIcons
@@ -97,7 +102,7 @@ const BottomNavigation = ({
             color={theme.mode === "dark" ? "#10201A" : "#FFFFFF"}
           />
         );
-      case "notifications":
+      case "activity":
         return <MaterialIcons name="notifications" size={22} color={color} />;
       case "settings":
         return <MaterialIcons name="settings" size={22} color={color} />;

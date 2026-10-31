@@ -1,8 +1,12 @@
+import { useLocalNetworkPermission } from "@/hooks/use-local-network-permission";
 import { useZeroconf } from "react-native-zeroconf";
 
 export function useAutoPiDiscovery() {
+  const permission = useLocalNetworkPermission({ serviceType: "autopihub" });
+
   const { services, isScanning } = useZeroconf({
     type: "autopihub",
+    enabled: permission.data !== null && permission.data !== "denied",
   });
   const devices = services.map((service) => ({
     name: service.name,
@@ -12,5 +16,9 @@ export function useAutoPiDiscovery() {
     service,
   }));
 
-  return { devices, isScanning };
+  return {
+    devices,
+    isScanning: permission.isLoading || isScanning,
+    permissionDenied: permission.isDenied,
+  };
 }
