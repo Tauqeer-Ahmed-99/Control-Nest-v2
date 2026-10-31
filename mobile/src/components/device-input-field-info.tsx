@@ -4,10 +4,7 @@ import Tile from "@/components/tile";
 import useAvailableGPIOPins from "@/hooks/use-available-gpio-pins";
 import { useHouseId } from "@/hooks/use-house";
 import { Device } from "@/models/device";
-import {
-  GPIOPinConfig,
-  HeaderPinType,
-} from "@/models/pin-header-config";
+import { GPIOPinConfig, HeaderPinType } from "@/models/pin-header-config";
 import React, { useCallback, useMemo, useState } from "react";
 
 const DeviceInputFieldsInfo = ({
@@ -27,55 +24,49 @@ const DeviceInputFieldsInfo = ({
   );
   const houseId = useHouseId();
   const { data: availableGPIOPins, isLoading: isLoadingAvailableGPIOPins } =
-    useAvailableGPIOPins({ houseId: houseId ?? "" });
+    useAvailableGPIOPins({
+      houseId: houseId ?? "",
+      controllerDeviceId: device?.controllerDeviceId ?? "",
+    });
   const devicePinNumber = device?.pinNumber;
   const deviceGpioPinNumber = device?.gpioPinNumber;
 
-  const selectedPinConfig = useMemo(
-    () => {
-      const availablePin = availableGPIOPins?.data?.find(
-        (pinConfig) => pinConfig.headerPinNumber === devicePinNumber,
-      );
+  const selectedPinConfig = useMemo(() => {
+    const availablePin = availableGPIOPins?.data?.find(
+      (pinConfig) => pinConfig.headerPinNumber === devicePinNumber,
+    );
 
-      if (availablePin) {
-        return availablePin;
-      }
+    if (availablePin) {
+      return availablePin;
+    }
 
-      if (
-        devicePinNumber !== undefined &&
-        deviceGpioPinNumber !== undefined
-      ) {
-        return {
-          headerPinNumber: devicePinNumber,
-          gpioPinNumber: deviceGpioPinNumber,
-          type: HeaderPinType.GPIO,
-          voltage: null,
-        } as GPIOPinConfig;
-      }
+    if (devicePinNumber !== undefined && deviceGpioPinNumber !== undefined) {
+      return {
+        headerPinNumber: devicePinNumber,
+        gpioPinNumber: deviceGpioPinNumber,
+        type: HeaderPinType.GPIO,
+        voltage: null,
+      } as GPIOPinConfig;
+    }
 
-      return undefined;
-    },
-    [availableGPIOPins?.data, deviceGpioPinNumber, devicePinNumber],
-  );
+    return undefined;
+  }, [availableGPIOPins?.data, deviceGpioPinNumber, devicePinNumber]);
 
-  const availablePins = useMemo(
-    () => {
-      const available = [...(availableGPIOPins?.data ?? [])].sort(
-        (a, b) => a.headerPinNumber - b.headerPinNumber,
-      );
+  const availablePins = useMemo(() => {
+    const available = [...(availableGPIOPins?.data ?? [])].sort(
+      (a, b) => a.headerPinNumber - b.headerPinNumber,
+    );
 
-      return selectedPinConfig
-        ? [
-            selectedPinConfig,
-            ...available.filter(
-              (pinConfig) =>
-                pinConfig.headerPinNumber !== selectedPinConfig.headerPinNumber,
-            ),
-          ]
-        : available;
-    },
-    [availableGPIOPins?.data, selectedPinConfig],
-  );
+    return selectedPinConfig
+      ? [
+          selectedPinConfig,
+          ...available.filter(
+            (pinConfig) =>
+              pinConfig.headerPinNumber !== selectedPinConfig.headerPinNumber,
+          ),
+        ]
+      : available;
+  }, [availableGPIOPins?.data, selectedPinConfig]);
 
   const handleDeviceNameChange = useCallback(
     (text: string) => {

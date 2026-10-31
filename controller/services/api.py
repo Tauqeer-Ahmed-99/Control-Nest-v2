@@ -1,131 +1,95 @@
 import os
-import json
 from typing import Any
 
-from pydantic import TypeAdapter
 import requests
-from requests.auth import HTTPBasicAuth
 from dotenv import load_dotenv
+from pydantic import TypeAdapter
 
-from utils.try_except import try_except
 from models.api import APIResponse, APIError
 from models.cotroller_init import ControllerInitResponse
 from models.controller_device import ControllerDeviceResponse
+from services.controller_config import ControllerConfigService
 from services.observability import current_request_id
 
 load_dotenv()
-
 SERVER_URL = os.getenv("SERVER_URL")
-API_USERNAME = os.getenv("API_USERNAME")
-API_PASSWORD = os.getenv("API_PASSWORD")
+if not SERVER_URL:
+    raise RuntimeError("SERVER_URL is not defined in .env")
 
-SERVER_URL = os.getenv("SERVER_URL")
-
-if SERVER_URL is None:
-    raise Exception("SERVER_URL is not defined in .env")
-
-if API_USERNAME is None:
-    raise Exception("API_USERNAME is not defined in .env")
-
-if API_PASSWORD is None:
-    raise Exception("API_PASSWORD is not defined in .env")
 
 class APIService:
-    base_url: str = SERVER_URL
-    basic_auth: HTTPBasicAuth = HTTPBasicAuth(username=f"{API_USERNAME}",password=f"{API_PASSWORD}")
+    base_url: str = SERVER_URL.rstrip("/")
 
     @staticmethod
-    def request_headers(request_id: str | None = None) -> dict[str, str]:
-        return {"X-Request-ID": request_id or current_request_id()}
-    
-    async def init_controller(self, user_id: str, access_token: str, controller_name: str):
-        result = await try_except(
-            requests.post(
+    def request_headers(request_id: str | None = None, api_key: str | None = None) -> dict[str, str]:
+        config = ControllerConfigService().get_controller_config()
+        key = api_key or config.get("apiKey")
+        if not key:
+            raise APIError(message="Pair this controller with its API key first.", status_code=401)
+        return {
+            "Authorization": f"Bearer {key}",
+            "X-Controller-Installation-ID": ControllerConfigService().installation_id(),
+            "X-Request-ID": request_id or current_request_id(),
+        }
+
+    async def init_controller(self, api_key: str, access_token: str | None = None):
+        try:
+            result = requests.post(
                 f"{self.base_url}/api/v1/controller-device/init",
-                data=json.dumps({"userId": user_id, "accessToken": access_token, "controllerName": controller_name}),
-                auth=self.basic_auth,
-                headers=self.request_headers(),
+                json={"installationId": ControllerConfigService().installation_id(), **({"accessToken": access_token} if access_token else {})},
+                headers=self.request_headers(api_key=api_key), timeout=60,
             )
-        )
-
-        if result.error is not None:
-            raise APIError(message=str(result.error))
-
-        # response: APIResponse[HouseResponse] = result.data.json()
-        response = TypeAdapter(APIResponse[ControllerInitResponse]).validate_python(result.data.json())
-
-        if not response.success:
-            raise APIError(message=response.message, errors=response.errors)
-
-        if response.data is None:
-            raise APIError(message="Controller init response data is null.")
-
+        except requests.RequestException:
+            raise APIError(message="Cannot reach Control Nest. Check your internet connection.") from None
+        response = TypeAdapter(APIResponse[ControllerInitResponse]).validate_python(result.json())
+        if not result.ok or not response.success or response.data is None:
+            raise APIError(message=response.message, status_code=result.status_code if not result.ok else 502)
         return response.data
 
     def get_controller_device_data(self, controller_device_id: str):
-        # result = await try_except(
-        #     requests.get(
-        #         f"{self.base_url}/api/v1/contoller-device",
-        #         params={"controllerDeviceId": controller_device_id},
-        #         auth=self.basic_auth
-        #     )
-        # )
-
-        # if result.error is not None:
-        #     raise APIError(message=str(result.error))
-
         result = requests.get(
             f"{self.base_url}/api/v1/controller-device",
-            params={"controllerDeviceId": controller_device_id},
-            auth=self.basic_auth,
-            headers=self.request_headers(),
+            headers=self.request_headers(), timeout=15,
         )
-
         response = TypeAdapter(APIResponse[ControllerDeviceResponse]).validate_python(result.json())
-
-        if not response.success:
-            raise APIError(message=response.message, errors=response.errors)
-
-        if response.data is None:
-            raise APIError(message="Controller Device Data response data is null.")
-
+        if not result.ok or not response.success or response.data is None:
+            raise APIError(message=response.message, status_code=result.status_code if not result.ok else 502)
         return response.data
 
+    def authorize_user(self, access_token: str) -> bool:
+        try:
+            response = requests.post(
+                f"{self.base_url}/api/v1/controller-device/access",
+                json={"accessToken": access_token}, headers=self.request_headers(), timeout=10,
+            )
+            return response.ok and response.json().get("success") is True
+        except (requests.RequestException, ValueError, APIError):
+            return False
+
     async def create_device_control_log(self, controller_device_id: str, device_id: str, status_from: bool, status_to: bool):
-        result = await try_except(
+        try:
             requests.post(
                 f"{self.base_url}/api/v1/controller-device/device-control-logs",
-                data=json.dumps({"controllerDeviceId": controller_device_id, "deviceId": device_id, "statusFrom": status_from, "statusTo": status_to}),
-                auth=self.basic_auth,
-                headers=self.request_headers(),
+                json={"controllerDeviceId": controller_device_id, "deviceId": device_id, "statusFrom": status_from, "statusTo": status_to},
+                headers=self.request_headers(), timeout=10,
             )
-        )
-
-        if result.error is not None:
-            return
+        except (requests.RequestException, APIError):
+            pass
 
     def push_observability_event(self, event: dict[str, Any]) -> None:
+        if not ControllerConfigService().get_controller_config().get("apiKey"):
+            return
         request_id = str(event.get("requestId") or current_request_id())
         for attempt in range(3):
             try:
                 response = requests.post(
                     f"{self.base_url}/api/v1/observability/events",
-                    json=event,
-                    auth=self.basic_auth,
-                    headers=self.request_headers(request_id),
-                    timeout=3,
+                    json=event, headers=self.request_headers(request_id), timeout=3,
                 )
-                if response.ok:
+                if response.ok or response.status_code in (401, 403):
                     return
             except requests.RequestException:
                 pass
-
             if attempt < 2:
                 import time
-
                 time.sleep(0.2 * (attempt + 1))
-
-
-
-
-

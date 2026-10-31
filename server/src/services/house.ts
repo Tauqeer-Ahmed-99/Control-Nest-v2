@@ -18,6 +18,7 @@ export const getHouse = async (
   const house = await database.query.houses.findFirst({
     where: { id: houseId },
     with: {
+      controllerDevice: { columns: { id: true, houseId: true, name: true } },
       houseMembers: { columns: { houseId: true, userId: true, isAdmin: true } },
       rooms: { with: { devices: true } },
     },

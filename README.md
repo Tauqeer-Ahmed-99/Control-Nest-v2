@@ -14,15 +14,16 @@ The system has three parts:
 
 ### Pairing and connections
 
-1. Sign in to Control Nest and connect your phone to the same local network as the controller.
-2. The app discovers the controller using the `_autopihub._tcp.local.` service and sends an authenticated setup request over the local network.
-3. The hosted API registers the controller and provisions a Cloudflare Tunnel with a controller hostname.
-4. Complete the controller-password step in the app. The app stores the controller configuration for later use.
-5. The controller connects out through its tunnel. The app can then reach it at its HTTPS hostname when the phone is away from home.
+1. Register on the website through Clerk using email, first name, and last name. Verify your email.
+2. Open **My houses**, create a house, and add a named controller. Save its API key; it is shown once.
+3. In the mobile app, sign in with the same email and open **Houses & controllers**. Select the Pi on the same trusted Wi-Fi and paste its API key. Alternatively, run `bash ~/Control-Nest-v2/controller/scripts/setup.sh` on the Pi and paste the key at its hidden prompt.
+4. The server binds the controller to this installation and provisions its remote tunnel. The Pi persists its key and tunnel configuration through `JsonStore`; the phone stores only public connection details.
+5. Open your house in the app, add rooms, and choose a controller when adding each device. Repeat Add controller for each additional Pi in the same house. House members use their Clerk accounts; no shared house password is needed.
+
 
 ## Internet access and security
 
-Configured controllers are reachable from the public Internet through their Cloudflare Tunnel hostname. The tunnel avoids configuring inbound port forwarding on the home router, but the controller is no longer local-network-only. The controller API currently validates Clerk session tokens, and the hosted API checks user and house access. Keep tunnel tokens, Clerk secret keys, database credentials, and other private deployment credentials out of documentation. The tracked `controller/.env` is the controller configuration used by this repository; review it before reusing or distributing the project.
+Configured controllers are reachable from the public Internet through their Cloudflare Tunnel hostname. The tunnel avoids configuring inbound port forwarding on the home router, but the controller is no longer local-network-only. The controller API validates Clerk session tokens and checks house membership with the hosted API. Every controller-to-server request uses its own revocable API key and installation identity; keys cannot read another controller?s devices or write its logs. Keep tunnel tokens, Clerk secret keys, database credentials, and other private deployment credentials out of documentation. The tracked `controller/.env` is the controller configuration used by this repository; review it before reusing or distributing the project.
 
 Mobile build variables prefixed with `EXPO_PUBLIC_` are included in the client app and must not contain secret credentials. Use them only for values intended to be public, such as the API URL and Clerk publishable key.
 
@@ -52,7 +53,6 @@ The source expects the following environment variable names. Controller values a
 - `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`
 - `CLERK_SECRET_KEY`
 - `DEV_DATABASE_URL` and `PROD_DATABASE_URL`
-- `CONTROLLER_USERNAME` and `CONTROLLER_PASSWORD`
 - `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_ACCOUNT_API_TOKEN`, and `CLOUDFLARE_ZONE_ID`
 - `WEATHER_API_URL` and `WEATHER_API_KEY`
 
@@ -64,9 +64,12 @@ The source expects the following environment variable names. Controller values a
 ### Home controller (`controller/`)
 
 - `SERVER_URL`
-- `API_USERNAME` and `API_PASSWORD`
 - `CLERK_JWT_KEY` (the PEM public key used to verify Clerk session tokens; the controller does not need `CLERK_SECRET_KEY`)
 - `APP_PERSISTENT_STORAGE_PATH`
+
+The shared controller Basic credentials (`CONTROLLER_USERNAME` / `CONTROLLER_PASSWORD` on the server and `API_USERNAME` / `API_PASSWORD` on the Pi) are retired. Remove them from deployment settings. API keys are generated per controller and stored as SHA-256 hashes on the server; raw keys are stored only in owner-readable controller JSON, never in mobile build variables.
+
+For email-only registration, configure the Clerk instance as described in [server setup](server/README.md#clerk-email-only-registration). Existing databases must run [the controller migration](server/src/database/migrations/add-controller-api-keys.sql) before using this version. Existing controllers keep their IDs: generate a key in My houses, update their code, and pair them again on the same Pi.
 
 ## Development entry points
 

@@ -55,7 +55,7 @@ class DiscoveryService:
 
         self.info = ServiceInfo(
             type_=SERVICE_TYPE,
-            name=f"{self.device_name}.{SERVICE_TYPE}",
+            name=f"{self.device_name}-{self.controller_config_service.installation_id()[:8]}.{SERVICE_TYPE}",
             addresses=[socket.inet_aton(ip)],
             port=self.port,
             properties={
@@ -64,7 +64,7 @@ class DiscoveryService:
                 b"controllerDeviceId": str(self.controller_config_service.controller_device_id).encode(),
                 b"hostname" : str(self.controller_config_service.tunnel_hostname).encode(),
             },
-            server="autopi-hub.local.",
+            server=f"autopi-{self.controller_config_service.installation_id()[:8]}.local.",
         )
 
         self.zeroconf = AsyncZeroconf()

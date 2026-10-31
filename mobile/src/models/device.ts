@@ -3,6 +3,7 @@ import { Metadata } from "./metadata";
 export type Device = {
   id: string;
   roomId: string;
+  controllerDeviceId: string;
   name: string;
   pinNumber: number;
   gpioPinNumber: number;

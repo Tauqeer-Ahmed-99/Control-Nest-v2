@@ -9,9 +9,16 @@ export interface AvailableGPIOPinsSearchParams {
 
 export type AvailableGPIOPinsResponse = APIResponse<GPIOPinConfig[]>;
 
-const useAvailableGPIOPins = ({ houseId }: { houseId: string }) => {
+const useAvailableGPIOPins = ({
+  houseId,
+  controllerDeviceId,
+}: {
+  houseId: string;
+  controllerDeviceId: string;
+}) => {
   return useApiQuery<AvailableGPIOPinsResponse>(ApiRoutes.AvailableGPIOPins, {
-    searchParams: { mode: "available", houseId },
+    searchParams: { mode: "available", houseId, controllerDeviceId },
+    queryConfig: { enabled: Boolean(houseId && controllerDeviceId) },
   });
 };
 

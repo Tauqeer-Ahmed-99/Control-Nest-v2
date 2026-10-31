@@ -38,6 +38,7 @@ const gpioPinNumberSchema = z
 export const CreateDeviceSchema = z
   .object({
     roomId: z.uuidv4().nonempty().nonoptional(),
+    controllerDeviceId: z.uuidv4(),
     pinNumber: headerPinNumberSchema,
     gpioPinNumber: gpioPinNumberSchema,
     deviceName: z.string().nonempty().nonoptional(),
@@ -125,6 +126,7 @@ export const SwitchDeviceSchema = z.object({
 export type Device = {
   id: string;
   roomId: string;
+  controllerDeviceId: string;
   name: string;
   pinNumber: number;
   gpioPinNumber: number;

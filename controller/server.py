@@ -36,7 +36,11 @@ system_service = SystemService(controller_config_service, api_service, cloudflar
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
-    controller_device.initialize()
+    try:
+        controller_device.initialize()
+    except Exception:
+        # Keep setup reachable after key revocation or a network outage.
+        print("Controller sync unavailable. Open setup to reconnect.")
 
     await discovery_service.start()
     await schedule_service.start()
@@ -76,15 +80,17 @@ async def config_controller(body: ConfigController, auth: Annotated[tuple[str, s
     
     result = await try_except(
         system_service.config(
-            body.userId,
-            access_token,
-            body.controllerName
+            body.apiKey,
+            access_token
         )
     )
 
     if result.error is not None:
         return APIResponse.from_error(result.error)
 
+    await discovery_service.stop()
+    discovery_service.device_name = controller_config_service.get_controller_device_name()
+    await discovery_service.start()
     return APIResponse.from_data(message="Controller initialized", data=result.data)
 
 @app.post("/device", status_code=201)

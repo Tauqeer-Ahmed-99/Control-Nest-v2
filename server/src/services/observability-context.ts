@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from "node:async_hooks";
 type RequestContext = {
   requestId: string;
   userId?: string;
+  controllerDeviceId?: string;
   timings: RequestTiming[];
 };
 
@@ -27,6 +28,12 @@ export const setObservabilityUserId = (userId: string) => {
 
 export const getObservabilityUserId = () =>
   requestContext.getStore()?.userId;
+
+export const setObservabilityControllerId = (controllerDeviceId: string) => {
+  const context = requestContext.getStore();
+  if (context) context.controllerDeviceId = controllerDeviceId;
+};
+export const getObservabilityControllerId = () => requestContext.getStore()?.controllerDeviceId;
 
 export const getRequestTimings = () =>
   requestContext.getStore()?.timings ?? [];

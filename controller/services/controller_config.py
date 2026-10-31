@@ -1,10 +1,13 @@
 from typing import Any, Literal
+from uuid import uuid4
+from threading import Lock
 
 from services.json_store import JsonStore
 
 CONTROLLER_STORE_FILE_NAME = "controller_metadata"
 
 class ControllerConfigService:
+    _identity_lock = Lock()
     controller_config: dict[str, Any] = {}
     controller_device_id: str | None = None
     tunnel_hostname: str | None = None
@@ -59,3 +62,19 @@ class ControllerConfigService:
 
     def save_controller_config(self, content: dict) -> bool:
         return JsonStore.write_file(CONTROLLER_STORE_FILE_NAME, content)
+    def installation_id(self) -> str:
+        with self._identity_lock:
+            identity = JsonStore.read_file("installation")
+            if not identity.get("id"):
+                identity = {"id": str(uuid4())}
+                if not JsonStore.write_file("installation", identity):
+                    raise RuntimeError("Unable to save installation identity.")
+            return identity["id"]
+
+    def public_config(self):
+        config = self.get_controller_config()
+        return {
+            "house": {"id": config["house"]["id"], "name": config["house"]["name"]},
+            "controllerDevice": {"id": config["controllerDevice"]["id"], "houseId": config["controllerDevice"]["houseId"], "name": config["controllerDevice"]["name"]},
+            "tunnel": {"hostname": config["tunnel"]["hostname"]},
+        }

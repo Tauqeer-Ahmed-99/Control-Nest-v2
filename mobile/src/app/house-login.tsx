@@ -1,882 +1,314 @@
 import Header from "@/components/header";
 import InputField from "@/components/input-field";
+import Select from "@/components/select";
 import LoadingSkeleton from "@/components/loading-skeleton";
-import {
-  CONTROLLER_DEVICE_CONFIG,
-  CONTROLLER_DEVICE_PASSWORDS,
-} from "@/constants/storage";
+import { CONTROLLER_DEVICE_CONFIG } from "@/constants/storage";
+import { SERVER_URL } from "@/constants/urls";
 import { useAutoPiDiscovery } from "@/hooks/use-autopi-discovery";
-import useControllerHealth from "@/hooks/use-controller-health";
-import {
-  useGetMobileStorageData,
-  useSetMobileStorageData,
-} from "@/hooks/use-mobile-storage-data";
-import usePassword from "@/hooks/use-password";
+import useApiQuery from "@/hooks/use-api-query";
+import useConfigController from "@/hooks/use-config-controller";
+import useHouseControllers from "@/hooks/use-house-controllers";
+import { useSetMobileStorageData } from "@/hooks/use-mobile-storage-data";
+import { APIResponse } from "@/models/api";
 import { ControllerConfig } from "@/models/controller-config";
-import { configControllerOnLocalNetwork } from "@/utils/local-network";
-import { useAuth } from "@clerk/expo";
+import { UserHouse } from "@/models/onboarding";
+import { ApiRoutes } from "@/routes/routes";
 import Feather from "@expo/vector-icons/Feather";
 import { Button, Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
-import { useRouter } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { Link, router } from "expo-router";
+import { useState } from "react";
 import {
-  FlatList,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  StyleSheet,
-  ToastAndroid,
   TouchableOpacity,
   View,
 } from "react-native";
 
-const HouseLogin = () => {
-  const { userId, getToken } = useAuth();
+export default function HouseLogin() {
+  const { theme } = useTheme();
+  const colors = theme.colors;
+  const queryClient = useQueryClient();
+  const housesQuery = useApiQuery<APIResponse<UserHouse[]>>(ApiRoutes.Houses, {
+    queryConfig: { staleTime: 0 },
+  });
+  const houses = housesQuery.data?.data ?? [];
+  const [houseId, setHouseId] = useState("");
+  const house = houses.find((item) => item.id === houseId) ?? houses[0];
+  const controllersQuery = useHouseControllers(house?.id ?? "");
+  const controllers = controllersQuery.data?.data ?? [];
   const { devices, isScanning, permissionDenied } = useAutoPiDiscovery();
   const [device, setDevice] = useState<(typeof devices)[number] | null>(null);
-  const [name, setName] = useState("");
-  const [password, setPassword] = useState("");
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isSettingUpConfig, setIsSettingUpConfig] = useState(false);
-  const [step, setStep] = useState<"controller" | "password">("controller");
-  const [pendingConfig, setPendingConfig] = useState<ControllerConfig | null>(
-    null,
+  const [apiKey, setApiKey] = useState("");
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [saving, setSaving] = useState(false);
+  const { mutateAsync: saveConfig } = useSetMobileStorageData<ControllerConfig>(
+    CONTROLLER_DEVICE_CONFIG,
   );
-  const styles = useStyles();
-  const { isLoading: isGettingLocalControllerConfig } =
-    useGetMobileStorageData<ControllerConfig>(CONTROLLER_DEVICE_CONFIG);
-  const { data: savedPasswords, isLoading: isGettingSavedPasswords } =
-    useGetMobileStorageData<Record<string, string>>(
-      CONTROLLER_DEVICE_PASSWORDS,
-    );
-  const { mutateAsync: saveControllerConfigLocal } =
-    useSetMobileStorageData<ControllerConfig>(CONTROLLER_DEVICE_CONFIG);
-  const { mutateAsync: saveControllerPasswords } = useSetMobileStorageData<
-    Record<string, string>
-  >(CONTROLLER_DEVICE_PASSWORDS);
-  const { mutateAsync: setOrCheckPassword } = usePassword();
-  const {
-    data,
-    isLoading: isCheckingControllerHealth,
-    refetch: recheckHealth,
-  } = useControllerHealth();
+  const address = device?.addresses[0];
+  const pairing = useConfigController(
+    address
+      ? `http://${address.includes(":") ? `[${address}]` : address}:${device?.port}`
+      : SERVER_URL,
+  );
+  const card = {
+    backgroundColor: colors.secondary,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: colors.greyOutline,
+    padding: 20,
+    gap: 16,
+  } as const;
+  const heading = { fontSize: 20, fontFamily: "Lexend_600SemiBold" } as const;
 
-  const queryClient = useQueryClient();
-  const router = useRouter();
-
-  const isLoading =
-    isCheckingControllerHealth ||
-    isGettingLocalControllerConfig ||
-    isGettingSavedPasswords;
-  const isHealthy = data?.details == null && data?.data?.health === "ok";
-  const isConfigured = device?.service.txt.configured === "true";
-  const isSaving = isSettingUpConfig;
-
-  const {
-    theme: {
-      colors: { grey2, grey3, grey5, secondary, success, warning },
-    },
-  } = useTheme();
-
-  useEffect(() => {
-    if (__DEV__) {
-      console.log("data?.details", data?.details);
-      console.log("data?.data?.health", data?.data?.health);
-      console.log("healthy", isHealthy);
-    }
-  }, [data?.data?.health, data?.details, isHealthy]);
-
-  useEffect(() => {
-    if (isHealthy) {
-      router.replace("/(tabs)/home");
-    }
-  }, [isHealthy, router]);
-
-  const showError = useCallback((error: Error) => {
-    ToastAndroid.show(error.message, ToastAndroid.LONG);
-  }, []);
-
-  const continueToPassword = useCallback(async () => {
-    if (!device) {
-      showError(new Error("Select a controller first."));
-      return;
-    }
-
-    const ip = device.addresses.at(0);
-    const port = device.port;
-
-    if (!ip) {
-      showError(new Error("Controller IP address is unavailable."));
-      return;
-    }
-
-    if (!port) {
-      showError(new Error("Controller port is unavailable."));
-      return;
-    }
-
+  async function openHouse() {
+    if (!house) return;
+    setSaving(true);
+    setError("");
     try {
-      setIsSettingUpConfig(true);
-      const token = `Bearer ${await getToken()}`;
-      const config = await configControllerOnLocalNetwork({
-        localNetworkUrl: `http://${ip}:${port}`,
-        userId: userId as string,
-        controllerName: name,
-        token,
+      const controller = controllers.find((item) => item.paired && item.tunnel);
+      await saveConfig({
+        house,
+        controllerDevice: controller ?? {
+          id: "",
+          houseId: house.id,
+          name: "No controller paired",
+        },
+        tunnel: { hostname: controller?.tunnel?.hostname ?? "" },
       });
-
-      setPassword(savedPasswords?.[config.controllerDevice.id] ?? "");
-      setIsPasswordVisible(false);
-      setPendingConfig(config);
-      setStep("password");
-    } catch (error) {
-      showError(
-        error instanceof Error
-          ? error
-          : new Error("Unable to configure controller."),
-      );
-    } finally {
-      setIsSettingUpConfig(false);
-    }
-  }, [device, getToken, name, savedPasswords, showError, userId]);
-
-  const initAndConnect = useCallback(async () => {
-    if (!pendingConfig) {
-      showError(new Error("Configure the controller before setting a password."));
-      return;
-    }
-
-    if (!password) {
-      showError(new Error("Enter the controller password."));
-      return;
-    }
-
-    try {
-      setIsSettingUpConfig(true);
-      await setOrCheckPassword({
-        controllerDeviceId: pendingConfig.controllerDevice.id,
-        controllerDevicePassword: password,
-      });
-
-      await saveControllerPasswords({
-        ...(savedPasswords ?? {}),
-        [pendingConfig.controllerDevice.id]: password,
-      });
-      await queryClient.invalidateQueries({
-        queryKey: ["mobile-storage", CONTROLLER_DEVICE_PASSWORDS],
-      });
-
-      await saveControllerConfigLocal(pendingConfig);
       await queryClient.invalidateQueries({
         queryKey: ["mobile-storage", CONTROLLER_DEVICE_CONFIG],
       });
-      await recheckHealth();
-    } catch (error) {
-      showError(
-        error instanceof Error
-          ? error
-          : new Error("Unable to configure controller."),
+      await queryClient.invalidateQueries({ queryKey: [ApiRoutes.UserHouse] });
+      router.replace("/(tabs)/home");
+    } catch {
+      setError("Unable to save your house selection. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+  async function pairController() {
+    if (!device || !address) {
+      setError("Select a controller on your Wi-Fi first.");
+      return;
+    }
+    if (!/^cn_[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/.test(apiKey.trim())) {
+      setError("Paste the complete API key from My houses on the website.");
+      return;
+    }
+    setError("");
+    setNotice("");
+    try {
+      const result = await pairing.mutateAsync({ apiKey: apiKey.trim() });
+      if (!result.success) throw new Error(result.message);
+      setApiKey("");
+      setDevice(null);
+      setHouseId(result.data.house.id);
+      setNotice(
+        `${result.data.controllerDevice.name} is connected to ${result.data.house.name}. You can now add devices to it.`,
+      );
+      await housesQuery.refetch();
+      await queryClient.invalidateQueries({
+        queryKey: [ApiRoutes.HouseControllers],
+      });
+    } catch (e) {
+      setError(
+        e instanceof Error
+          ? e.message
+          : "Unable to pair this controller. Try again.",
       );
     } finally {
-      setIsSettingUpConfig(false);
+      pairing.reset();
     }
-  }, [
-    password,
-    pendingConfig,
-    queryClient,
-    recheckHealth,
-    saveControllerPasswords,
-    saveControllerConfigLocal,
-    savedPasswords,
-    setOrCheckPassword,
-    showError,
-  ]);
-
-  const onSaveAndConfig = useCallback(() => {
-    void initAndConnect();
-  }, [initAndConnect]);
-
-  const selectDevice = useCallback(
-    (selectedDevice: (typeof devices)[number]) => {
-      setDevice(selectedDevice);
-      setName(selectedDevice.name);
-      setPassword("");
-      setIsPasswordVisible(false);
-      setPendingConfig(null);
-      setStep("controller");
-    },
-    [],
-  );
-
-  const closeDevice = useCallback(() => {
-    setDevice(null);
-    setName("");
-    setPassword("");
-    setIsPasswordVisible(false);
-    setPendingConfig(null);
-    setStep("controller");
-  }, []);
-
-  if (isLoading || isHealthy) {
-    return (
-      <View style={styles.container}>
-        <View style={styles.content}>
-          <Header heading="Available Devices" />
-          <View style={styles.deviceList}>
-            {[0, 1, 2].map((item) => (
-              <View
-                key={item}
-                style={[
-                  styles.deviceCard,
-                  {
-                    backgroundColor: secondary,
-                    borderColor: grey5,
-                    borderWidth: 1,
-                  },
-                ]}
-                accessible={false}
-                accessibilityElementsHidden
-              >
-                <LoadingSkeleton height={48} width={48} borderRadius={14} />
-                <View style={styles.deviceInfo}>
-                  <LoadingSkeleton
-                    height={14}
-                    width={item === 1 ? "64%" : "76%"}
-                    borderRadius={5}
-                  />
-                  <View style={styles.deviceAddressRow}>
-                    <LoadingSkeleton height={13} width={13} borderRadius={7} />
-                    <LoadingSkeleton height={11} width="82%" borderRadius={5} />
-                  </View>
-                  <View style={styles.deviceStatusRow}>
-                    <LoadingSkeleton height={7} width={7} borderRadius={4} />
-                    <LoadingSkeleton height={11} width={88} borderRadius={5} />
-                  </View>
-                </View>
-                <LoadingSkeleton height={22} width={22} borderRadius={11} />
-              </View>
-            ))}
-          </View>
-        </View>
-      </View>
-    );
   }
+
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={{ flex: 1, backgroundColor: colors.primary }}
       behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
-      <View style={styles.content}>
-        <Header heading="Available Devices" />
-        <FlatList
-          data={devices}
-          keyExtractor={(item) => item.name}
-          contentContainerStyle={styles.deviceList}
-          showsVerticalScrollIndicator={false}
-          renderItem={({ item }) => {
-            const isSelected = device?.name === item.name;
-            const configured = item.service.txt.configured === "true";
-            const address = item.addresses.at(0);
-
-            return (
-              <TouchableOpacity
-                activeOpacity={0.75}
-                onPress={() => selectDevice(item)}
-                style={[
-                  styles.deviceCard,
-                  {
-                    backgroundColor: secondary,
-                    borderColor: isSelected ? success : grey5,
-                    borderWidth: isSelected ? 2 : 1,
-                  },
-                ]}
-              >
-                <View style={styles.deviceIcon}>
-                  <Feather
-                    name="cpu"
-                    size={24}
-                    color={isSelected ? success : grey2}
-                  />
-                </View>
-
-                <View style={styles.deviceInfo}>
-                  <Text style={styles.deviceName} numberOfLines={1}>
-                    {item.name}
-                  </Text>
-
-                  <View style={styles.deviceAddressRow}>
-                    <Feather name="globe" size={13} color={grey2} />
-                    <Text
-                      style={[styles.deviceAddress, { color: grey2 }]}
-                      numberOfLines={1}
-                    >
-                      {address
-                        ? `${address}:${item.port}`
-                        : "Address unavailable"}
-                    </Text>
-                  </View>
-
-                  <View style={styles.deviceStatusRow}>
-                    <View
-                      style={[
-                        styles.statusDot,
-                        {
-                          backgroundColor: configured ? success : warning,
-                        },
-                      ]}
-                    />
-
-                    <Text
-                      style={[
-                        styles.deviceStatus,
-                        {
-                          color: configured ? success : warning,
-                        },
-                      ]}
-                    >
-                      {configured ? "Configured" : "Setup required"}
-                    </Text>
-                  </View>
-                </View>
-
-                <View style={styles.deviceAction}>
-                  <Feather
-                    name={isSelected ? "check-circle" : "chevron-right"}
-                    size={22}
-                    color={isSelected ? success : grey3}
-                  />
-                </View>
-              </TouchableOpacity>
-            );
-          }}
-          ListEmptyComponent={
-            permissionDenied ? (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyIcon}>
-                  <Feather name="wifi-off" size={30} color={grey2} />
-                </View>
-                <Text style={styles.emptyTitle}>Permission needed</Text>
-                <Text style={[styles.emptyDescription, { color: grey2 }]}>
-                  Allow Local Network access in your device settings to
-                  discover AutoPi controllers on your Wi-Fi network.
-                </Text>
-              </View>
-            ) : isScanning ? (
-              <View style={{ gap: 12 }}>
-                <Text style={{ color: grey2, fontSize: 13 }}>
-                  Searching for AutoPi Hub
-                </Text>
-                <View
-                  style={{ gap: 12 }}
-                  accessible={false}
-                  accessibilityElementsHidden
-                >
-                  {[0, 1, 2].map((item) => (
-                    <View
-                      key={item}
-                      style={[
-                        styles.deviceCard,
-                        {
-                          backgroundColor: secondary,
-                          borderColor: grey5,
-                          borderWidth: 1,
-                        },
-                      ]}
-                    >
-                      <LoadingSkeleton height={48} width={48} borderRadius={14} />
-                      <View style={styles.deviceInfo}>
-                        <LoadingSkeleton height={14} width="72%" borderRadius={5} />
-                        <View style={styles.deviceAddressRow}>
-                          <LoadingSkeleton height={13} width={13} borderRadius={7} />
-                          <LoadingSkeleton height={11} width="82%" borderRadius={5} />
-                        </View>
-                        <View style={styles.deviceStatusRow}>
-                          <LoadingSkeleton height={7} width={7} borderRadius={4} />
-                          <LoadingSkeleton height={11} width={88} borderRadius={5} />
-                        </View>
-                      </View>
-                      <LoadingSkeleton height={22} width={22} borderRadius={11} />
-                    </View>
-                  ))}
-                </View>
-              </View>
-            ) : (
-              <View style={styles.emptyState}>
-                <View style={styles.emptyIcon}>
-                  <Feather name="wifi" size={30} color={grey2} />
-                </View>
-
-                <Text style={styles.emptyTitle}>No AutoPi Hub found</Text>
-
-                <Text style={[styles.emptyDescription, { color: grey2 }]}>
-                  Make sure your controller is powered on and connected to the
-                  same Wi-Fi network.
-                </Text>
-              </View>
-            )
-          }
-        />
-      </View>
-
-      {Boolean(device) && (
-        <View style={styles.bottomSheet}>
-          <ScrollView
-            style={{ flex: 1, width: "100%" }}
-            contentContainerStyle={{
-              flexGrow: 1,
-              paddingVertical: 12,
-              paddingHorizontal: 24,
-            }}
-            keyboardShouldPersistTaps="handled"
+      <ScrollView
+        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Header heading="Houses & controllers" />
+        <Text style={{ color: colors.grey2 }}>
+          Sign in with the same email you used on the website. Choose your
+          house, or connect another Raspberry Pi.
+        </Text>
+        {(error || housesQuery.error || controllersQuery.error) && (
+          <Text accessibilityRole="alert" style={{ color: colors.error }}>
+            {error ||
+              housesQuery.error?.message ||
+              controllersQuery.error?.message}
+          </Text>
+        )}
+        {notice !== "" && (
+          <Text
+            accessibilityLiveRegion="polite"
+            style={{ color: colors.success }}
           >
-            <View style={styles.header}>
-              <Text
-                style={{
-                  fontFamily: "Lexend_600SemiBold",
-                  fontSize: 24,
+            {notice}
+          </Text>
+        )}
+        <View style={card}>
+          <Text style={heading}>Your house</Text>
+          {housesQuery.isLoading ? (
+            <LoadingSkeleton height={52} width="100%" />
+          ) : house ? (
+            <>
+              <Select
+                label="House"
+                field="name"
+                items={houses}
+                selectedValue={house}
+                onValueChange={(value: UserHouse) => {
+                  setHouseId(value.id);
+                  setError("");
                 }}
-              >
-                {isConfigured ? "Connect" : "Configure"}
-              </Text>
-              <TouchableOpacity
-                accessibilityRole="button"
-                accessibilityLabel="Close controller setup"
-                hitSlop={10}
-                onPress={closeDevice}
-                style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
-              >
-                <Feather name="x" size={24} color={grey3} />
-              </TouchableOpacity>
-            </View>
-            <View style={styles.stepper}>
-              <View style={styles.stepItem}>
-                <View
-                  style={[
-                    styles.stepCircle,
-                    {
-                      backgroundColor: success,
-                      borderColor: success,
-                    },
-                  ]}
-                >
-                  <Text style={styles.stepNumber}>1</Text>
-                </View>
-                <Text style={[styles.stepLabel, { color: success }]}>
-                  Controller
-                </Text>
-              </View>
-              <View
-                style={[
-                  styles.stepLine,
-                  {
-                    backgroundColor: step === "password" ? success : grey5,
-                  },
-                ]}
               />
-              <View style={styles.stepItem}>
+              <Text style={{ color: colors.grey2 }}>
+                {controllers.length} controller
+                {controllers.length === 1 ? "" : "s"} in this house. Devices in
+                all rooms are available together.
+              </Text>
+              {controllers.map((controller) => (
                 <View
-                  style={[
-                    styles.stepCircle,
-                    {
-                      backgroundColor:
-                        step === "password" ? success : secondary,
-                      borderColor: step === "password" ? success : grey5,
-                    },
-                  ]}
+                  key={controller.id}
+                  style={{
+                    flexDirection: "row",
+                    gap: 12,
+                    alignItems: "center",
+                  }}
                 >
-                  <Text
-                    style={[
-                      styles.stepNumber,
-                      step !== "password" && styles.inactiveStepNumber,
-                    ]}
-                  >
-                    2
-                  </Text>
+                  <Feather name="cpu" size={20} color={colors.success} />
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontFamily: "Lexend_500Medium" }}>
+                      {controller.name}
+                    </Text>
+                    <Text style={{ color: colors.grey2, fontSize: 12 }}>
+                      {!controller.apiKeyLastFour
+                        ? "Needs an API key"
+                        : controller.paired
+                          ? "Paired"
+                          : "Ready to pair"}
+                    </Text>
+                  </View>
                 </View>
-                <Text
-                  style={[
-                    styles.stepLabel,
-                    { color: step === "password" ? success : grey3 },
-                  ]}
-                >
-                  Password
-                </Text>
-              </View>
-            </View>
-            <View
+              ))}
+              <Button
+                loading={saving}
+                disabled={pairing.isPending || controllersQuery.isLoading}
+                onPress={() => void openHouse()}
+              >
+                Open house
+              </Button>
+            </>
+          ) : (
+            <Text style={{ color: colors.grey2 }}>
+              Create a house on the website, then add a named controller to
+              generate its API key.
+            </Text>
+          )}
+          <Link href={`${SERVER_URL}/dashboard` as `https://${string}`} asChild>
+            <Button type="outline">Manage houses on website</Button>
+          </Link>
+          <Button
+            type="clear"
+            onPress={() => {
+              void housesQuery.refetch();
+              void controllersQuery.refetch();
+            }}
+          >
+            Refresh houses & controllers
+          </Button>
+        </View>
+        <View style={card}>
+          <Text style={heading}>Connect a Raspberry Pi</Text>
+          <Text style={{ color: colors.grey2 }}>
+            1. On the website, add a controller to your house and copy its API
+            key.
+          </Text>
+          <Text style={{ color: colors.grey2 }}>
+            2. Keep your phone and Pi on the same trusted Wi-Fi. Select the Pi
+            below.
+          </Text>
+          {permissionDenied && (
+            <Text style={{ color: colors.warning }}>
+              Allow local network access in your phone settings to find
+              controllers.
+            </Text>
+          )}
+          {!devices.length && (
+            <Text style={{ color: colors.grey2 }}>
+              {isScanning
+                ? "Looking for controllers..."
+                : "No controllers found. Check the Pi is powered on and AutoPiHub is running."}
+            </Text>
+          )}
+          {devices.map((item) => (
+            <TouchableOpacity
+              key={item.name}
+              accessibilityRole="button"
+              accessibilityState={{ selected: device?.name === item.name }}
+              onPress={() => setDevice(item)}
               style={{
-                width: "100%",
-                flexDirection: "column",
+                minHeight: 52,
+                padding: 14,
+                flexDirection: "row",
                 alignItems: "center",
+                gap: 12,
+                borderRadius: 14,
+                borderWidth: 1,
+                borderColor:
+                  device?.name === item.name
+                    ? colors.success
+                    : colors.greyOutline,
               }}
             >
-              {step === "controller" ? (
-                <ControllerDetailsStep
-                  name={name}
-                  isConfigured={isConfigured}
-                  isSaving={isSaving}
-                  styles={styles}
-                  onNameChange={(text) => {
-                    setName(text);
-                    setPendingConfig(null);
-                  }}
-                  onContinue={() => void continueToPassword()}
-                />
-              ) : (
-                <ControllerPasswordStep
-                  password={password}
-                  isPasswordVisible={isPasswordVisible}
-                  isConfigured={isConfigured}
-                  isSaving={isSaving}
-                  canSubmit={Boolean(password.trim() && pendingConfig)}
-                  styles={styles}
-                  onPasswordChange={setPassword}
-                  onTogglePasswordVisibility={() =>
-                    setIsPasswordVisible((isVisible) => !isVisible)
-                  }
-                  onBack={() => {
-                    setIsPasswordVisible(false);
-                    setStep("controller");
-                  }}
-                  onSubmit={onSaveAndConfig}
-                />
-              )}
-            </View>
-          </ScrollView>
+              <Feather
+                name={device?.name === item.name ? "check-circle" : "cpu"}
+                size={22}
+                color={colors.success}
+              />
+              <View style={{ flex: 1 }}>
+                <Text>{item.name}</Text>
+                <Text style={{ fontSize: 12, color: colors.grey2 }}>
+                  {item.service.txt.configured === "true"
+                    ? "Paired - paste a replacement key to reconnect"
+                    : "Ready for setup"}
+                </Text>
+              </View>
+            </TouchableOpacity>
+          ))}
+          <Text style={{ color: colors.grey2 }}>
+            3. Paste the API key for this Pi. It will be saved securely on the
+            controller.
+          </Text>
+          <InputField
+            label="Controller API key"
+            placeholder="cn_..."
+            value={apiKey}
+            onChangeText={setApiKey}
+            secureTextEntry
+            autoCapitalize="none"
+            disabled={pairing.isPending}
+          />
+          <Button
+            loading={pairing.isPending}
+            disabled={!device || !apiKey.trim() || saving}
+            onPress={() => void pairController()}
+          >
+            Connect controller
+          </Button>
+          <Text style={{ color: colors.grey2, fontSize: 12 }}>
+            Each Pi needs its own controller entry and key. You can also enter
+            the key with the setup script directly on the Pi.
+          </Text>
         </View>
-      )}
+      </ScrollView>
     </KeyboardAvoidingView>
   );
-};
-
-export default HouseLogin;
-
-const useStyles = () => {
-  const { theme } = useTheme();
-  const { primary, secondary, success } = theme.colors;
-
-  return StyleSheet.create({
-    container: {
-      flex: 1,
-      backgroundColor: primary,
-    },
-    content: {
-      paddingHorizontal: 12,
-      backgroundColor: primary,
-      height: "100%",
-      width: "100%",
-    },
-    deviceList: {
-      paddingTop: 16,
-      paddingBottom: 280,
-      gap: 12,
-    },
-    deviceCard: {
-      flexDirection: "row",
-      alignItems: "center",
-      padding: 16,
-      borderRadius: 18,
-      borderWidth: 1,
-      borderColor: theme.colors.grey5,
-      gap: 14,
-    },
-    deviceIcon: {
-      width: 48,
-      height: 48,
-      borderRadius: 14,
-      backgroundColor:
-        theme.mode === "dark"
-          ? "rgba(104, 212, 181, 0.14)"
-          : "rgba(18, 107, 91, 0.10)",
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    deviceInfo: {
-      flex: 1,
-      gap: 6,
-    },
-    deviceName: {
-      fontFamily: "Lexend_600SemiBold",
-      fontSize: 16,
-    },
-    deviceAddressRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    deviceAddress: {
-      flex: 1,
-      fontFamily: "Lexend_400Regular",
-      fontSize: 12,
-    },
-    deviceStatusRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-      marginTop: 2,
-    },
-    statusDot: {
-      width: 7,
-      height: 7,
-      borderRadius: 4,
-    },
-    deviceStatus: {
-      fontFamily: "Lexend_400Regular",
-      fontSize: 12,
-    },
-    deviceAction: {
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    emptyState: {
-      alignItems: "center",
-      justifyContent: "center",
-      paddingHorizontal: 28,
-      paddingTop: 64,
-    },
-    emptyIcon: {
-      width: 64,
-      height: 64,
-      borderRadius: 20,
-      backgroundColor: "rgba(128, 128, 128, 0.12)",
-      alignItems: "center",
-      justifyContent: "center",
-      marginBottom: 20,
-    },
-    emptyTitle: {
-      fontFamily: "Lexend_600SemiBold",
-      fontSize: 17,
-      textAlign: "center",
-      marginBottom: 8,
-    },
-    emptyDescription: {
-      fontFamily: "Lexend_400Regular",
-      fontSize: 13,
-      lineHeight: 20,
-      textAlign: "center",
-    },
-    bottomSheet: {
-      backgroundColor: secondary,
-      height: "auto",
-      maxHeight: "90%",
-      width: "100%",
-      borderTopLeftRadius: 24,
-      borderTopRightRadius: 24,
-      position: "absolute",
-      bottom: 0,
-      justifyContent: "center",
-      alignItems: "center",
-    },
-    header: {
-      width: "100%",
-      flexDirection: "row",
-      justifyContent: "space-between",
-      alignItems: "center",
-      marginBottom: 24,
-    },
-    stepper: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "center",
-      gap: 10,
-      marginBottom: 16,
-    },
-    stepItem: {
-      flexDirection: "row",
-      alignItems: "center",
-      gap: 6,
-    },
-    stepLine: {
-      width: 28,
-      height: 2,
-    },
-    stepCircle: {
-      width: 24,
-      height: 24,
-      borderRadius: 12,
-      borderWidth: 1,
-      alignItems: "center",
-      justifyContent: "center",
-    },
-    stepNumber: {
-      color: theme.mode === "dark" ? "#10201A" : "#FFFFFF",
-      fontSize: 12,
-      fontFamily: "Lexend_600SemiBold",
-    },
-    inactiveStepNumber: {
-      color: theme.colors.grey2,
-    },
-    passwordIcon: {
-      color: theme.colors.grey2,
-    },
-    stepLabel: {
-      fontSize: 12,
-      fontFamily: "Lexend_500Medium",
-    },
-    stepActions: {
-      width: "100%",
-      flexDirection: "column-reverse",
-      justifyContent: "center",
-      alignItems: "center",
-      gap: 4,
-      marginTop: 12,
-    },
-    controllerDetailsForm: {
-      width: "100%",
-      alignItems: "stretch",
-      gap: 16,
-    },
-    controllerNameInput: {
-      width: "100%",
-      marginHorizontal: 0,
-      marginBottom: 0,
-      paddingHorizontal: 0,
-    },
-    continueButtonContainer: {
-      alignSelf: "center",
-      borderRadius: 25,
-      marginBottom: 0,
-    },
-    button: {
-      width: 190,
-      borderRadius: 25,
-      backgroundColor: success,
-    },
-    passwordButton: {
-      width: 190,
-      borderRadius: 25,
-      backgroundColor: success,
-    },
-    buttonContainer: {
-      borderRadius: 25,
-      marginBottom: 24,
-    },
-    buttonTitle: {
-      fontFamily: "Lexend_600SemiBold",
-      color: theme.mode === "dark" ? "#10201A" : "#FFFFFF",
-    },
-    backButtonTitle: {
-      color: success,
-      fontFamily: "Lexend_500Medium",
-    },
-  });
-};
-
-type SetupStepStyles = ReturnType<typeof useStyles>;
-
-type ControllerDetailsStepProps = {
-  name: string;
-  isConfigured: boolean;
-  isSaving: boolean;
-  styles: SetupStepStyles;
-  onNameChange: (name: string) => void;
-  onContinue: () => void;
-};
-
-const ControllerDetailsStep = ({
-  name,
-  isConfigured,
-  isSaving,
-  styles,
-  onNameChange,
-  onContinue,
-}: ControllerDetailsStepProps) => (
-  <View style={styles.controllerDetailsForm}>
-    <InputField
-      disabled={isConfigured}
-      label="Controller Device Name"
-      placeholder="Enter recognizable name..."
-      value={name}
-      onChangeText={onNameChange}
-      containerStyle={styles.controllerNameInput}
-    />
-    <Button
-      size="lg"
-      buttonStyle={styles.button}
-      titleStyle={styles.buttonTitle}
-      containerStyle={styles.continueButtonContainer}
-      loading={isSaving}
-      disabled={!name.trim() || isSaving}
-      onPress={onContinue}
-    >
-      Continue
-    </Button>
-  </View>
-);
-
-type ControllerPasswordStepProps = {
-  password: string;
-  isPasswordVisible: boolean;
-  isConfigured: boolean;
-  isSaving: boolean;
-  canSubmit: boolean;
-  styles: SetupStepStyles;
-  onPasswordChange: (password: string) => void;
-  onTogglePasswordVisibility: () => void;
-  onBack: () => void;
-  onSubmit: () => void;
-};
-
-const ControllerPasswordStep = ({
-  password,
-  isPasswordVisible,
-  isConfigured,
-  isSaving,
-  canSubmit,
-  styles,
-  onPasswordChange,
-  onTogglePasswordVisibility,
-  onBack,
-  onSubmit,
-}: ControllerPasswordStepProps) => (
-  <>
-    <InputField
-      label="Password"
-      placeholder={
-        isConfigured ? "Enter the password..." : "Set a new password..."
-      }
-      value={password}
-      onChangeText={onPasswordChange}
-      secureTextEntry={!isPasswordVisible}
-      autoCapitalize="none"
-      rightIcon={
-        <TouchableOpacity
-          accessibilityRole="button"
-          accessibilityLabel={
-            isPasswordVisible ? "Hide password" : "Show password"
-          }
-          activeOpacity={0.7}
-          onPress={onTogglePasswordVisibility}
-        >
-          <Feather
-            name={isPasswordVisible ? "eye-off" : "eye"}
-            color={styles.passwordIcon.color}
-            size={20}
-          />
-        </TouchableOpacity>
-      }
-    />
-    <View style={styles.stepActions}>
-      <Button
-        type="clear"
-        disabled={isSaving}
-        titleStyle={styles.backButtonTitle}
-        onPress={onBack}
-      >
-        Back
-      </Button>
-      <Button
-        size="lg"
-        loading={isSaving}
-        disabled={!canSubmit || isSaving}
-        buttonStyle={styles.passwordButton}
-        titleStyle={styles.buttonTitle}
-        containerStyle={styles.buttonContainer}
-        onPress={onSubmit}
-      >
-        {isConfigured ? "Login House" : "Set Password"}
-      </Button>
-    </View>
-  </>
-);
+}

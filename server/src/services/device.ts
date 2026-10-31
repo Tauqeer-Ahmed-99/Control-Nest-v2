@@ -21,12 +21,14 @@ import { getScheduledStatus } from "./schedule";
 export const createDevice = async (
   {
     roomId,
+    controllerDeviceId,
     pinNumber,
     gpioPinNumber,
     deviceName,
     wattage,
   }: {
     roomId: string;
+    controllerDeviceId: string;
     pinNumber: number;
     gpioPinNumber: number;
     deviceName: string;
@@ -37,7 +39,7 @@ export const createDevice = async (
 ) => {
   const [existingDevice, room] = await Promise.all([
     database.query.devices.findFirst({
-      where: { roomId, pinNumber },
+      where: { controllerDeviceId, pinNumber },
     }),
     database.query.rooms.findFirst({ where: { id: roomId } }),
   ]);
@@ -58,12 +60,27 @@ export const createDevice = async (
 
   await authorizeHouse({ houseId: room.houseId, userId });
 
+  const controller = await database.query.controllerDevices.findFirst({
+    where: {
+      id: controllerDeviceId,
+      houseId: room.houseId,
+      resourceStatus: "active",
+    },
+  });
+  if (!controller?.installationId || !controller.apiKeyHash)
+    throw new APIError({
+      message:
+        "Select a paired controller in this house with an active API key.",
+      statusCode: 400,
+    });
+
   const device = await database.transaction(async (txn) => {
     const results = await txn
       .insert(devices)
       .values({
         name: deviceName,
         roomId,
+        controllerDeviceId,
         pinNumber,
         gpioPinNumber,
         wattage,
@@ -128,8 +145,16 @@ export const updateDevice = async (
   await authorizeHouse({ houseId: room.houseId, userId });
 
   if (pinNumber != null) {
+    const currentDevice = await database.query.devices.findFirst({
+      where: { id: deviceId, roomId },
+    });
+    if (!currentDevice)
+      throw new APIError({ message: "Device not found.", statusCode: 404 });
     const existingDevice = await database.query.devices.findFirst({
-      where: { roomId, pinNumber },
+      where: {
+        controllerDeviceId: currentDevice.controllerDeviceId,
+        pinNumber,
+      },
     });
 
     if (existingDevice && existingDevice.id !== deviceId) {
@@ -202,6 +227,7 @@ export const removeDevice = async (
   await authorizeHouse({ houseId: room.houseId, userId });
 
   const removedDevice = await database.transaction(async (txn) => {
+    await removePhysicalDevice(txn, [deviceId], accessToken);
     const results = await txn
       .delete(devices)
       .where(and(eq(devices.roomId, roomId), eq(devices.id, deviceId)))
@@ -212,8 +238,6 @@ export const removeDevice = async (
     if (!removedDevice) {
       throw new APIError({ message: "Error while removing device." });
     }
-
-    await removePhysicalDevice(txn, [removedDevice.id], accessToken);
 
     return removedDevice;
   });
@@ -239,6 +263,7 @@ export const switchDevice = async (
           houseId: rooms.houseId,
           memberUserId: houseMembers.userId,
           tunnelHostname: tunnels.hostname,
+          apiKeyHash: controllerDevices.apiKeyHash,
         })
         .from(devices)
         .leftJoin(rooms, eq(devices.roomId, rooms.id))
@@ -251,12 +276,9 @@ export const switchDevice = async (
         )
         .leftJoin(
           controllerDevices,
-          eq(controllerDevices.houseId, rooms.houseId),
+          eq(controllerDevices.id, devices.controllerDeviceId),
         )
-        .leftJoin(
-          tunnels,
-          eq(tunnels.controllerDeviceId, controllerDevices.id),
-        )
+        .leftJoin(tunnels, eq(tunnels.controllerDeviceId, controllerDevices.id))
         .where(eq(devices.id, deviceId))
         .limit(1);
 
@@ -282,6 +304,11 @@ export const switchDevice = async (
     throw new APIError({ message: "Unauthorized", statusCode: 403 });
   }
 
+  if (!switchContext.apiKeyHash)
+    throw new APIError({
+      message: "Controller API key is revoked.",
+      statusCode: 403,
+    });
   const hostname = switchContext.tunnelHostname?.trim();
   if (!hostname) {
     throw new APIError({ message: "Tunnel hostname not found." });

@@ -6,7 +6,9 @@ from models.api import APIError
 class CloudflaredService:
 
     def initialize_cloudflared_tunnel(self, tunnel_token: str):
-        self.uninstall_cloudflared_service()
+        existing = subprocess.run(["systemctl", "cat", "cloudflared.service"], capture_output=True, check=False)
+        if existing.returncode == 0:
+            self.uninstall_cloudflared_service()
         self.install_cloudflared_service(tunnel_token)
 
 

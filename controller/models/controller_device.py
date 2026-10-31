@@ -4,6 +4,7 @@ from models.resource_status import ResourceStatus
 
 class DeviceResponse(BaseModel):
     id: str
+    controllerDeviceId: str
     roomId: str
     name: str
     status: bool

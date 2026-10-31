@@ -33,6 +33,7 @@ import useApiMutation from "./use-api-mutation";
 
 export type AddDeviceRequest = {
   roomId: string;
+  controllerDeviceId: string;
   pinNumber: number;
   gpioPinNumber: number;
   deviceName: string;

@@ -1,11 +1,11 @@
+import { APIResponse } from "@/models/api";
 import { ControllerConfig } from "@/models/controller-config";
+import { ApiRoutes } from "@/routes/routes";
 import useApiMutation from "./use-api-mutation";
-
-const useConfigController = (baseUrl: string) => {
-  return useApiMutation<{}, ControllerConfig>("/controller/configure", {
-    baseUrl: baseUrl,
-    queryConfig: { enabled: !!baseUrl },
-  });
-};
-
-export default useConfigController;
+export default function useConfigController(baseUrl: string) {
+  return useApiMutation<{ apiKey: string }, APIResponse<ControllerConfig>>(
+    ApiRoutes.ControllerConfigure,
+    { baseUrl },
+    { gcTime: 0 },
+  );
+}

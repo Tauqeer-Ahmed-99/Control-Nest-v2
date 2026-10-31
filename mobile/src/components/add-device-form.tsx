@@ -1,3 +1,4 @@
+import useHouseControllers from "@/hooks/use-house-controllers";
 import useAddDevice from "@/hooks/use-add-device";
 import useAvailableGPIOPins from "@/hooks/use-available-gpio-pins";
 import useHouse from "@/hooks/use-house";
@@ -27,7 +28,7 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
   const rooms = useMemo(
     () =>
       houseQuery.data?.details == null
-        ? houseQuery.data?.data?.rooms ?? []
+        ? (houseQuery.data?.data?.rooms ?? [])
         : [],
     [houseQuery.data],
   );
@@ -35,15 +36,25 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
     () => rooms?.find((room) => room.id === roomId),
     [roomId, rooms],
   );
-  const [selectedRoom, setSelectedRoom] = useState<Room | null>(
+  const [selectedRoomState, setSelectedRoom] = useState<Room | null>(
     room ?? (rooms?.[0] as Room) ?? null,
   );
+  const selectedRoom = selectedRoomState ?? room ?? rooms[0] ?? null;
+  const controllersQuery = useHouseControllers(selectedRoom?.houseId ?? "");
+  const controllers = (controllersQuery.data?.data ?? []).filter(
+    (controller) => controller.paired && controller.apiKeyLastFour,
+  );
+  const [controllerId, setControllerId] = useState("");
+  const selectedController =
+    controllers.find((controller) => controller.id === controllerId) ??
+    controllers[0];
   const [deviceName, setDeviceName] = useState("");
   const [deviceRating, setDeviceRating] = useState("");
-  const {
-    data: availableGPIOPins,
-    isLoading: isLoadingAvailableGPIOPins,
-  } = useAvailableGPIOPins({ houseId: selectedRoom?.houseId ?? "" });
+  const { data: availableGPIOPins, isLoading: isLoadingAvailableGPIOPins } =
+    useAvailableGPIOPins({
+      houseId: selectedRoom?.houseId ?? "",
+      controllerDeviceId: selectedController?.id ?? "",
+    });
 
   const gpioPin = useMemo(
     () => availableGPIOPins?.data?.[0],
@@ -59,13 +70,14 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
   const queryClient = useQueryClient();
 
   const handleSaveDevice = () => {
-    if (!selectedRoom || !selectedGPIOPin) {
+    if (!selectedRoom || !selectedGPIOPin || !selectedController) {
       return;
     }
 
     addDevice(
       {
         roomId: selectedRoom.id,
+        controllerDeviceId: selectedController.id,
         pinNumber: selectedGPIOPin.headerPinNumber,
         gpioPinNumber: selectedGPIOPin.gpioPinNumber,
         deviceName,
@@ -119,14 +131,6 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
     );
   }
 
-  if (availableGPIOPins?.data && !availableGPIOPins?.data?.length) {
-    return (
-      <View>
-        <MessageContainer message="Header pins not available." />
-      </View>
-    );
-  }
-
   return (
     <View
       style={{
@@ -157,12 +161,24 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
         />
       )}
       <Select
+        label="Controller"
+        items={controllers}
+        field="name"
+        selectedValue={selectedController}
+        isLoading={controllersQuery.isLoading}
+        onValueChange={(value) => {
+          setControllerId(value.id);
+          setSelectedGPIOPin(null);
+        }}
+      />
+      {!controllersQuery.isLoading && !controllers.length && (
+        <Text>Pair a controller in Settings / Houses & controllers first.</Text>
+      )}
+      <Select
         label="Header Pin Number"
-        items={
-          [...(availableGPIOPins?.data ?? [])].sort(
-            (a, b) => a.headerPinNumber - b.headerPinNumber,
-          )
-        }
+        items={[...(availableGPIOPins?.data ?? [])].sort(
+          (a, b) => a.headerPinNumber - b.headerPinNumber,
+        )}
         field="headerPinNumber"
         onValueChange={(newValue: GPIOPinConfig) =>
           setSelectedGPIOPin(newValue)
@@ -170,6 +186,11 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
         isLoading={isLoadingAvailableGPIOPins}
         selectedValue={selectedGPIOPin}
       />
+      {availableGPIOPins?.data?.length === 0 && (
+        <Text>
+          No free GPIO pins on this controller. Choose another controller.
+        </Text>
+      )}
       <InputField
         label="Device Name"
         placeholder="Enter device name"
@@ -196,7 +217,13 @@ const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
         <Button type="clear" disabled={isPending} onPress={closeForm}>
           Cancel
         </Button>
-        <Button loading={isPending} onPress={handleSaveDevice}>
+        <Button
+          loading={isPending}
+          disabled={
+            !selectedController || !selectedGPIOPin || !deviceName.trim()
+          }
+          onPress={handleSaveDevice}
+        >
           Save
         </Button>
       </View>

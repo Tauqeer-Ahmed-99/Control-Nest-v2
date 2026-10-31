@@ -4,10 +4,23 @@ import database from "@/database";
 import { APIError } from "@/models/api";
 
 export const getGPIOPins = async (
-  { mode, houseId }: { mode: "all" | "available"; houseId: string },
+  {
+    mode,
+    houseId,
+    controllerDeviceId,
+  }: { mode: "all" | "available"; houseId: string; controllerDeviceId: string },
   userId: string,
 ) => {
   await authorizeHouse({ houseId, userId });
+
+  const controller = await database.query.controllerDevices.findFirst({
+    where: { id: controllerDeviceId, houseId },
+  });
+  if (!controller)
+    throw new APIError({
+      message: "Controller not found in this house.",
+      statusCode: 404,
+    });
 
   if (mode === "all") {
     return pinHeaderConfig.filter((p) => p.type === HeaderPinType.GPIO);
@@ -24,7 +37,8 @@ export const getGPIOPins = async (
 
   const usedPins = house.rooms
     .flatMap((r) => r.devices)
-    .flatMap((d) => d.pinNumber);
+    .filter((d) => d.controllerDeviceId === controllerDeviceId)
+    .map((d) => d.pinNumber);
 
   const availablePins = pinHeaderConfig.filter(
     (p) =>

@@ -1,16 +1,14 @@
 import database, { DBTransaction } from "@/database";
-import {
-  controllerDevices,
-  houseMembers,
-  houses,
-  tunnels,
-} from "@/database/schema";
+import { controllerDevices, tunnels } from "@/database/schema";
 import { APIError, APIResponse } from "@/models/api";
 import { Device } from "@/models/device";
-import { createTunnelAndPublishAppService } from "./cloudflare";
-import { hashPassword, verifyPassword } from "./password";
+import {
+  createTunnelAndPublishAppService,
+  cleanupControllerTunnel,
+} from "./cloudflare";
 import { eq } from "drizzle-orm";
-import { authorizeHouse, authorizeHouseByControllerDevice } from "./auth-house";
+import { authorizeHouseByControllerDevice } from "./auth-house";
+import tryCatch from "@/utils/try-catch";
 import { HealthData } from "@/models/contoller-device";
 import { getRequestId, measureRequestTiming } from "./observability-context";
 
@@ -24,162 +22,118 @@ const controllerRequestHeaders = (accessToken: string) => {
   return headers;
 };
 
-export const initControllerDevice = async ({
-  houseName,
-  controllerName,
-  userId,
-}: {
-  houseName: string;
-  controllerName: string;
-  userId: string;
-}) => {
-  return database.transaction(async (tx) => {
-    const houseResults = await tx
-      .insert(houses)
-      .values({ name: houseName, createdBy: userId })
-      .returning();
-
-    const house = houseResults.at(0);
-
-    if (!house) {
-      throw new APIError({
-        message: "Error while creating a new house.",
-      });
-    }
-
-    const [results] = await Promise.all([
-      tx
-        .insert(controllerDevices)
-        .values({ name: controllerName, houseId: house.id, createdBy: userId })
-        .returning(),
-
-      tx.insert(houseMembers).values({
-        houseId: house.id,
-        userId: userId,
-        isAdmin: true,
-        createdBy: userId,
-      }),
-    ]);
-
-    const controllerDevice = results.at(0);
-
-    if (!controllerDevice) {
-      throw new APIError({
-        message: "Error while creating controller device.",
-      });
-    }
-
-    const {
-      tunnelName,
-      cloudflareTunnel,
-      publishedServiceConfig,
-      dnsRecord,
-      tunnelToken,
-    } = await createTunnelAndPublishAppService({
-      tunnelName: `${controllerDevice.id}-autopihub`,
-    });
-
-    const tunnelResults = await tx
-      .insert(tunnels)
-      .values({
-        id: cloudflareTunnel.id!,
-        controllerDeviceId: controllerDevice.id,
-        name: tunnelName,
-        hostname: publishedServiceConfig.hostname,
-        token: tunnelToken,
-        dnsRecordId: dnsRecord.id,
-        createdBy: userId,
-      })
-      .returning();
-
-    const tunnel = tunnelResults.at(0);
-
-    if (!tunnel) {
-      throw new APIError({
-        message: "Error while creating db tunnel record.",
-      });
-    }
-
-    return { house, controllerDevice, tunnel };
-  });
-};
-
-export const checkOrSetControllerPassword = async (
-  {
-    controllerDeviceId,
-    controllerDevicePassword,
-  }: {
-    controllerDeviceId: string;
-    controllerDevicePassword: string;
-  },
-  userId: string,
+// Serialize enrollment so retries reuse the tunnel and a key cannot claim two Pis.
+export const initControllerDevice = async (
+  controller: typeof controllerDevices.$inferSelect,
+  installationId: string,
 ) => {
-  const controllerDevice = await database.query.controllerDevices.findFirst({
-    where: { id: controllerDeviceId },
-    with: { house: true },
-  });
-
-  if (!controllerDevice) {
-    throw new APIError({
-      message: "Controller device not found.",
-      statusCode: 404,
-    });
-  }
-
-  const house = controllerDevice.house;
-
-  if (!house) {
-    throw new APIError({
-      message: "Controller device house not found.",
-      statusCode: 404,
-    });
-  }
-
-  if (controllerDevice.passwordHash) {
-    await authorizeHouse({ houseId: house.id, userId });
-
-    const success = await verifyPassword(
-      controllerDevicePassword,
-      controllerDevice.passwordHash,
-    );
-
-    if (!success) {
-      throw new APIError({
-        message: "Invalid controller device or password.",
-        statusCode: 400,
+  let createdTunnel: { id: string; dnsRecordId: string } | undefined;
+  const { data, error } = await tryCatch(
+    database.transaction(async (tx) => {
+      const [current] = await tx
+        .select()
+        .from(controllerDevices)
+        .where(eq(controllerDevices.id, controller.id))
+        .for("update");
+      if (!current || current.apiKeyHash !== controller.apiKeyHash) {
+        throw new APIError({
+          message: "API key changed. Use the latest key.",
+          statusCode: 401,
+        });
+      }
+      if (current.installationId && current.installationId !== installationId) {
+        throw new APIError({
+          message:
+            "This controller is already paired to another Pi. Add a new controller for each Pi.",
+          statusCode: 409,
+        });
+      }
+      let tunnel = await tx.query.tunnels.findFirst({
+        where: { controllerDeviceId: current.id },
       });
-    }
-
-    return success;
+      if (!tunnel) {
+        const provisioned = await createTunnelAndPublishAppService({
+          tunnelName: `${current.id}-autopihub`,
+        });
+        createdTunnel = {
+          id: provisioned.cloudflareTunnel.id!,
+          dnsRecordId: provisioned.dnsRecord.id!,
+        };
+        [tunnel] = await tx
+          .insert(tunnels)
+          .values({
+            id: provisioned.cloudflareTunnel.id!,
+            controllerDeviceId: current.id,
+            name: provisioned.tunnelName,
+            hostname: provisioned.publishedServiceConfig.hostname,
+            token: provisioned.tunnelToken,
+            dnsRecordId: provisioned.dnsRecord.id!,
+            createdBy: current.createdBy,
+          })
+          .returning();
+      }
+      await tx
+        .update(controllerDevices)
+        .set({ installationId })
+        .where(eq(controllerDevices.id, current.id));
+      const house = await tx.query.houses.findFirst({
+        where: { id: current.houseId },
+      });
+      if (!house)
+        throw new APIError({ message: "House not found.", statusCode: 404 });
+      return {
+        house,
+        controllerDevice: {
+          id: current.id,
+          houseId: current.houseId,
+          name: current.name,
+          resourceStatus: current.resourceStatus,
+          createdAt: current.createdAt,
+          createdBy: current.createdBy,
+          modifiedAt: current.modifiedAt,
+          modifiedBy: current.modifiedBy,
+        },
+        tunnel,
+      };
+    }),
+  );
+  if (error) {
+    if (createdTunnel)
+      await cleanupControllerTunnel(
+        createdTunnel.id,
+        createdTunnel.dnsRecordId,
+      );
+    throw error instanceof APIError
+      ? error
+      : new APIError({ message: "Unable to pair controller. Please retry." });
   }
-
-  await authorizeHouse({ houseId: house.id, userId, checkAdmin: true });
-
-  const passwordHash = await hashPassword(controllerDevicePassword);
-
-  const result = await database
-    .update(controllerDevices)
-    .set({ passwordHash })
-    .where(eq(controllerDevices.id, controllerDeviceId))
-    .returning();
-
-  if (!result.at(0)) {
-    throw new APIError({ message: "Error while saving password hash." });
-  }
-
-  return true;
+  return data;
 };
 
 export const getControllerDeviceData = async (controllerDeviceId: string) => {
-  const controllerDevice = await database.query.controllerDevices.findFirst({
-    where: { id: controllerDeviceId },
-    with: { house: { with: { rooms: { with: { devices: true } } } } },
-  });
-
-  const devices =
-    controllerDevice?.house?.rooms.flatMap((r) => r.devices) ?? [];
-
-  return { ...controllerDevice, house: undefined, devices };
+  const { data, error } = await tryCatch(
+    database.query.controllerDevices.findFirst({
+      where: { id: controllerDeviceId },
+      columns: {
+        id: true,
+        houseId: true,
+        name: true,
+        resourceStatus: true,
+        createdAt: true,
+        createdBy: true,
+        modifiedAt: true,
+        modifiedBy: true,
+      },
+    }),
+  );
+  if (error || !data)
+    throw new APIError({ message: "Controller not found.", statusCode: 404 });
+  const result = await tryCatch(
+    database.query.devices.findMany({ where: { controllerDeviceId } }),
+  );
+  if (result.error)
+    throw new APIError({ message: "Unable to load controller devices." });
+  return { ...data, devices: result.data };
 };
 
 const getControllerDeviceUrlById = async (controllerDeviceId: string) => {
@@ -195,6 +149,11 @@ const getControllerDeviceUrlById = async (controllerDeviceId: string) => {
     });
   }
 
+  if (!controllerDevice.apiKeyHash)
+    throw new APIError({
+      message: "Controller API key is revoked.",
+      statusCode: 403,
+    });
   const tunnel = controllerDevice.tunnel;
 
   if (!tunnel) {
@@ -219,28 +178,16 @@ const getControllerDeviceUrlByDeviceId = async (
   txn?: DBTransaction,
 ) => {
   const device = await (txn ?? database).query.devices.findFirst({
-    where: {
-      id: deviceId,
-    },
-    with: {
-      room: {
-        with: {
-          house: {
-            with: {
-              controllerDevice: {
-                with: {
-                  tunnel: true,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
+    where: { id: deviceId },
+    with: { controllerDevice: { with: { tunnel: true } } },
   });
+  const hostname = device?.controllerDevice?.tunnel?.hostname;
 
-  const hostname =
-    device?.room?.house?.controllerDevice?.at(0)?.tunnel?.hostname;
+  if (!device?.controllerDevice?.apiKeyHash)
+    throw new APIError({
+      message: "Controller API key is revoked.",
+      statusCode: 403,
+    });
 
   if (!hostname) {
     throw new APIError({ message: "Tunnel hostname not found." });
@@ -331,18 +278,28 @@ export const removePhysicalDevice = async (
   deviceIds: string[],
   accessToken: string,
 ) => {
-  const url = await getControllerDeviceUrlByDeviceId(deviceIds.at(0)!);
-
-  const response = await fetch(`${url}/device`, {
-    method: "DELETE",
-    body: JSON.stringify({ deviceIds }),
-    headers: controllerRequestHeaders(accessToken),
+  const assigned = await txn.query.devices.findMany({
+    where: { id: { in: deviceIds } },
   });
-
-  const { success, message }: APIResponse = await response.json();
-
-  if (!success) {
-    throw new APIError({ message });
+  const groups = new Map<string, string[]>();
+  for (const device of assigned) {
+    groups.set(device.controllerDeviceId, [
+      ...(groups.get(device.controllerDeviceId) ?? []),
+      device.id,
+    ]);
+  }
+  for (const [controllerId, ids] of groups) {
+    const url = await getControllerDeviceUrlById(controllerId);
+    const response = await fetch(`${url}/device`, {
+      method: "DELETE",
+      body: JSON.stringify({ deviceIds: ids }),
+      headers: controllerRequestHeaders(accessToken),
+    });
+    const result: APIResponse = await response.json();
+    if (!response.ok || !result.success)
+      throw new APIError({
+        message: "Unable to remove devices from controller.",
+      });
   }
 };
 

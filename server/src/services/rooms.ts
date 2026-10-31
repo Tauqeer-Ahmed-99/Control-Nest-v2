@@ -48,6 +48,12 @@ export const removeRoom = async (
   await authorizeHouse({ houseId: room.houseId, userId });
 
   const removedRoom = await database.transaction(async (txn) => {
+    if (room.devices.length)
+      await removePhysicalDevice(
+        txn,
+        room.devices.map((device) => device.id),
+        accessToken,
+      );
     const removedDevices = await txn
       .delete(devices)
       .where(
@@ -67,14 +73,6 @@ export const removeRoom = async (
 
     if (!removedRoom) {
       throw new APIError({ message: "Error while removing room." });
-    }
-
-    if (removedDevices.length > 0) {
-      await removePhysicalDevice(
-        txn,
-        removedDevices.map((d) => d.id),
-        accessToken,
-      );
     }
 
     return { ...removedRoom, devices: removedDevices };

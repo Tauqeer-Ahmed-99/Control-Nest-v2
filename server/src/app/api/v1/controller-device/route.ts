@@ -6,12 +6,8 @@ import { withRequestObservability } from "@/services/request-observability";
 
 export const GET = withRequestObservability(async (req: NextRequest) => {
   try {
-    await authenticateControllerDevice(req);
-
-    const controllerDeviceId =
-      req.nextUrl.searchParams.get("controllerDeviceId")!;
-
-    const data = await getControllerDeviceData(controllerDeviceId);
+    const controller = await authenticateControllerDevice(req);
+    const data = await getControllerDeviceData(controller.id);
 
     return APIResponse.fromData({
       data,

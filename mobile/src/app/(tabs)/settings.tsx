@@ -497,6 +497,7 @@ const Settings = () => {
         </View>
 
         <View style={{ gap: 8 }}>
+          <Button type="outline" onPress={() => router.push("/house-login")}>Houses & controllers</Button>
           <Text
             style={{
               color: theme.colors.grey2,

@@ -1,25 +1,11 @@
-import { Metadata } from "./metadata";
-
-export type HouseConfig = {
-  id: string;
-  name: string;
-} & Metadata;
-
+// Only public connection details are stored on the phone. Keys and tunnel tokens stay on the Pi.
+export type HouseConfig = { id: string; name: string };
 export type ControllerDeviceConfig = {
   id: string;
   houseId: string;
   name: string;
-} & Metadata;
-
-export type TunnelConfig = {
-  id: string;
-  controllerDeviceId: string;
-  name: string;
-  hostname: string;
-  token: string;
-  dnsRecordId: string;
-} & Metadata;
-
+};
+export type TunnelConfig = { hostname: string };
 export type ControllerConfig = {
   house: HouseConfig;
   controllerDevice: ControllerDeviceConfig;

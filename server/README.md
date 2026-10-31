@@ -1,4 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Control Nest website and API
+
+This Next.js project serves the Control Nest website and the existing
+`/api/v1/*` serverless API together on Vercel (`server` is the project root).
+Control Nest is the mobile app; AutoPiHub is the Raspberry Pi controller service.
+Built by NMT Solutions OPC Pvt Ltd.
+
+## Website
+
+- `/` introduces the app with an interactive sample home, AutoPiHub overview,
+  setup entry points, and FAQs. The preview uses browser state and makes no
+  device-control requests.
+- `/guide` covers using the shared service: Raspberry Pi installation, the
+  relay connection reference, app pairing, devices, schedules, and updates.
+  Customers use the shared API and Cloudflare tunnels managed by NMT Solutions.
+- `/dashboard` provides house creation, multiple controllers per house, one-time API keys, replacement/revocation, and pairing instructions. Website account actions redirect through Clerk and return here after registration or sign-in.
+- App store downloads are not advertised until published destinations exist.
+
+## Development
+
+Configure the existing required server variables in a private `server/.env`
+(see `src/env/vars.ts` and the repository root README), then run:
+
+```bash
+npm ci
+npm run dev
+```
+
+Open `http://localhost:3000` or `http://localhost:3000/guide`. Verify changes with:
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```
+
+No new environment variables are required. Provider secrets stay on the server;
+only the public API origin and Clerk publishable key belong in the mobile build.
+The public guide contains no server deployment or credential configuration steps.
+Server environment and database instructions below are for service maintainers.
+
+## Styling, components, and brand assets
+
+Tailwind CSS v4 uses `@tailwindcss/postcss` through `postcss.config.mjs` for both
+development and production. `src/app/globals.css` maps shadcn semantic tokens to
+the exact mobile light/dark palette and follows system appearance. Floating
+navigation uses glass; reading and content surfaces stay opaque. Reduced motion,
+reduced transparency, higher contrast, keyboard focus, and skip navigation are
+supported. Primary buttons are 48px or larger and switches have 44px hit areas.
+
+shadcn/ui is configured in `components.json`. Radix-based components live in
+`src/components/ui`, website components in `src/components/site`. Add more with
+`npx shadcn@latest add <component>` from `server/`. Use `@/lib/utils` for the `cn`
+helper, retain semantic colors, and preserve Radix keyboard/ARIA behavior.
+
+`public/brand/` contains unmodified copies of the mobile app icon and NMT logo.
+Lexend Regular, Medium, and Semibold are bundled in `src/app/fonts/` from the
+mobile font package, including its SIL Open Font License. No Google Fonts
+request is required to build or render. Sync these files when mobile branding
+changes.
+
+The guide's `public/brand/connection-diagram.jpeg` is the original
+`mobile/assets/designs/Circuit Diagram.jpeg`, recovered unchanged from commit
+`0f4b4cc` after its removal from the current mobile assets. It is a reference,
+not a complete electrical installation plan.
+
+`SiteMotion` adds one brief reveal as sections enter the viewport. It leaves
+content visible without JavaScript and disables animation for reduced motion.
 
 ## Existing database pin migration
 
@@ -23,37 +90,27 @@ tokens, credentials, and API keys are redacted before storage. Signed-in users
 can inspect traces for their own requests and controllers in **Settings →
 Request history** in the mobile app.
 
-## Getting Started
+## Clerk email-only registration
 
-First, run the development server:
+In the Clerk Dashboard for the instance shared by the website and mobile app:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+1. Enable email sign-up/sign-in and email verification. Enable password authentication (the mobile email flow supports it).
+2. Require first and last name. Disable username and phone registration unless intentionally needed later.
+3. Disable **all social/enterprise connections**, including Google and Apple. Hosted Clerk pages use the instance settings; application code cannot enforce the fields or connection buttons on Clerk-hosted pages. Do this before exposing registration.
+4. Allow the deployed website origin and mobile redirect URLs in Clerk. Account actions use Clerk redirects; both sign-in and sign-up force a return to `/dashboard`. Keep the default hosted Account Portal URLs configured in Clerk. Do not point them back to `/dashboard` as the sign-in page.
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The website wraps all pages in `ClerkProvider`. The dashboard checks the session server-side, and every management API authenticates a Clerk bearer token and verifies house membership/admin permissions. A profile completion form collects first and last name for existing accounts that lack them.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Controller keys and multiple controllers
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Apply `src/database/migrations/add-controller-api-keys.sql` to an existing database before deploying this version. It adds hashed keys and installation identities, assigns each existing device to its house's only controller, and creates a unique GPIO pin index per controller. The migration refuses to guess for houses with zero or multiple controllers. For those houses, first add the nullable column with `ALTER TABLE devices ADD COLUMN IF NOT EXISTS "controllerDeviceId" uuid REFERENCES controller_devices(id);`, assign each device to the correct controller manually, then rerun the migration. Resolve any duplicate pin assignments on a controller before migration. Empty databases may use `npm run db-push`.
 
-## Learn More
+House admins generate one key per controller at My houses. Keys contain 256 random bits, are shown once, and are hashed with SHA-256 in PostgreSQL. The last four characters are safe to show in the UI. Replace key immediately invalidates the old key while retaining the Pi's installation binding; paste the replacement on that same Pi. Revoke blocks controller requests until a replacement is installed. Add another controller entry to connect another Pi.
 
-To learn more about Next.js, take a look at the following resources:
+Retire `CONTROLLER_USERNAME` and `CONTROLLER_PASSWORD`. No new shared secret environment variables are needed. The server continues to own Cloudflare, database, weather, and Clerk secrets. The Pi owns its generated API key and tunnel token. The mobile app receives only house/controller names, IDs, and public hostnames.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Management APIs: `GET /api/v1/houses`, `POST /api/v1/house`, and `GET/POST/PATCH /api/v1/house/controllers`. Controllers enroll with `POST /api/v1/controller-device/init`; all subsequent controller calls use `Authorization: Bearer <controller-api-key>` and `X-Controller-Installation-ID`. Request bodies and query strings cannot override the identity derived from the key. Device fetches and control logs are restricted to that controller's explicitly assigned devices. The `/controller-device/access` endpoint verifies a user session against the controller's house for inbound Pi requests, including public tunnel access.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Deploy the API/schema, mobile app, and controller update together: the retired shared credentials and password-based setup are intentionally not accepted. Existing houses/memberships are retained. Generate keys for existing controller entries before pairing again.
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Run the controller security regression suite with `node --test tests/controller-security.test.mjs` from `server/`. It uses the real services and routes with isolated database/provider adapters; it does not provision cloud resources. Controller persistence tests run with `python -m unittest discover -s controller/tests -v` from the repository root and replace hardware/network adapters. Live Clerk, PostgreSQL migration, Cloudflare, LAN discovery, and GPIO verification require the deployment and a Pi.

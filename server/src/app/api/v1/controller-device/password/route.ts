@@ -1,27 +1,16 @@
-import { APIResponse } from "@/models/api";
-import { ControllerDevicePasswordSchema } from "@/models/contoller-device";
-import { authenticate } from "@/services/auth";
-import { checkOrSetControllerPassword } from "@/services/controller-device";
-import { validate } from "@/services/validation";
 import { NextRequest } from "next/server";
+import { APIError, APIResponse } from "@/models/api";
+import { authenticate } from "@/services/auth";
 import { withRequestObservability } from "@/services/request-observability";
 
+// Give old app builds a useful upgrade message instead of accepting shared passwords.
 export const POST = withRequestObservability(async (req: NextRequest) => {
   try {
-    const { user } = await authenticate(req);
-
-    const body = await req.json();
-
-    const params = validate({
-      schema: ControllerDevicePasswordSchema,
-      object: body,
-    });
-
-    const data = await checkOrSetControllerPassword(params, user.id);
-
-    return APIResponse.fromData({
-      data,
-      message: "Success",
+    await authenticate(req);
+    throw new APIError({
+      message:
+        "Password setup has been retired. Update the app and use Houses & controllers to pair with an API key.",
+      statusCode: 410,
     });
   } catch (error) {
     return APIResponse.fromError(error);

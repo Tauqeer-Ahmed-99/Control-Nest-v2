@@ -53,4 +53,5 @@ for script in clock.sh packages.sh stores.sh cloudflared.sh service.sh; do
     "scripts/${script}"
 done
 
-echo "Setup completed successfully."
+echo "Installation completed. Create your house and controller on the website, then pair in the app."
+echo "Or run: bash ${CONTROLLER_DIR}/scripts/setup.sh"

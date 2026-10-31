@@ -18,6 +18,7 @@ class ControllerDevice:
     controller_device_id: str | None = None
 
     def __init__(self, controller_config_service: ControllerConfigService,api_service: APIService):
+        self.devices = []
         self.controller_config_service = controller_config_service
         self.api_service = api_service
         # self.initialize() # DONOT INITIALIZE IT HERE, Already initialized in server.py @asynccontextmanager lifespan function
@@ -61,6 +62,8 @@ class ControllerDevice:
             raise Exception(f"Error initializing output devices: {e}")
 
     def add_device(self, device_res: DeviceResponse):
+        if device_res.controllerDeviceId != self.controller_config_service.get("controllerDevice", "id"):
+            raise ValueError("Device does not belong to this controller.")
         device = Device(device_res)
         device.output_device = OutputDevice(
             device.gpio_pin_number,

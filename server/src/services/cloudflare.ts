@@ -35,6 +35,18 @@ const deleteTunnel = async ({ tunnelId }: { tunnelId: string }) => {
   });
 };
 
+export const cleanupControllerTunnel = async (
+  tunnelId: string,
+  dnsRecordId: string,
+) => {
+  await tryCatch(
+    cloudflare.dns.records.delete(dnsRecordId, {
+      zone_id: env.variables.CLOUDFLARE_ZONE_ID,
+    }),
+  );
+  await tryCatch(deleteTunnel({ tunnelId }));
+};
+
 const publishAppService = async ({
   tunnelName,
   cloudflareTunnel,
@@ -98,8 +110,6 @@ export const createTunnelAndPublishAppService = async ({
   );
 
   if (tunnelError) {
-    console.log("[Cloudflare Create Tunnel Error]: ", tunnelError);
-
     throw new APIError({
       message: "Error occured while creating cloudflare tunnel.",
     });
@@ -110,13 +120,7 @@ export const createTunnelAndPublishAppService = async ({
   );
 
   if (publishError) {
-    console.log("[Cloudflare Publish App Service Error]: ", publishError);
-
-    const { error } = await tryCatch(
-      deleteTunnel({ tunnelId: cloudflareTunnel.id! }),
-    );
-
-    console.log("[Cloudflare Delete Tunnel Error]: ", error);
+    await tryCatch(deleteTunnel({ tunnelId: cloudflareTunnel.id! }));
 
     throw new APIError({
       message: "Error occured while publishing cloudflare app service.",
@@ -131,13 +135,7 @@ export const createTunnelAndPublishAppService = async ({
   );
 
   if (dnsRecordError) {
-    console.log("[Cloudflare Create DNS Record Error]: ", dnsRecordError);
-
-    const { error } = await tryCatch(
-      deleteTunnel({ tunnelId: cloudflareTunnel.id! }),
-    );
-
-    console.log("[Cloudflare Delete Tunnel Error]: ", error);
+    await tryCatch(deleteTunnel({ tunnelId: cloudflareTunnel.id! }));
 
     throw new APIError({
       message: "Error occured while creating DNS record.",
@@ -149,7 +147,7 @@ export const createTunnelAndPublishAppService = async ({
   );
 
   if (tokenError) {
-    console.log("[Cloudflare Get Tunnel Token Error]: ", tokenError);
+    await cleanupControllerTunnel(cloudflareTunnel.id!, dnsRecord.id!);
 
     throw new APIError({
       message: "Error occured while fetching tunnel token.",

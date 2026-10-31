@@ -21,14 +21,6 @@ const EnvVarsSchema = z.object({
     .string()
     .nonempty({ error: "PROD_DATABASE_URL is required." })
     .nonoptional({ error: "PROD_DATABASE_URL is required." }),
-  CONTROLLER_USERNAME: z
-    .string()
-    .nonempty({ error: "CONTROLLER_USERNAME is required." })
-    .nonoptional({ error: "CONTROLLER_USERNAME is required." }),
-  CONTROLLER_PASSWORD: z
-    .string()
-    .nonempty({ error: "CONTROLLER_PASSWORD is required." })
-    .nonoptional({ error: "CONTROLLER_PASSWORD is required." }),
   CLOUDFLARE_ACCOUNT_ID: z
     .string()
     .nonempty({ error: "CLOUDFLARE_ACCOUNT_ID is required." })

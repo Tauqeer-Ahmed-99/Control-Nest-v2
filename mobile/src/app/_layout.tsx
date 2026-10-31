@@ -173,7 +173,7 @@ function AppLayout({ publishableKey }: { publishableKey: string }) {
                   <Stack.Screen
                     name="house-login"
                     options={{
-                      title: "AutoPi Hub Configuration",
+                      title: "Houses & controllers",
                       headerShown: true,
                       headerTitleStyle: {
                         color: palette.text,

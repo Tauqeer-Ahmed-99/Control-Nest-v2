@@ -1,3 +1,4 @@
+import tryCatch from "@/utils/try-catch";
 import database from "@/database";
 import { deviceControlLogs } from "@/database/schema";
 import { APIError } from "@/models/api";
@@ -26,32 +27,18 @@ export const createLog = async ({
   statusTo: boolean;
   controllerDeviceId: string;
 }) => {
-  const controllerDevice = await measureRequestTiming(
-    "db-control-log-ownership-lookup",
-    () =>
-      database.query.controllerDevices.findFirst({
-        where: { id: controllerDeviceId },
-        with: {
-          house: {
-            with: {
-              rooms: { with: { devices: { where: { id: deviceId } } } },
-            },
-          },
-        },
-      }),
+  const { data: device, error } = await tryCatch(
+    database.query.devices.findFirst({
+      where: { id: deviceId, controllerDeviceId },
+    }),
   );
-
-  const device = (controllerDevice?.house?.rooms ?? [])
-    .flatMap((r) => r.devices)
-    .filter((d) => d.id === deviceId);
-
-  if (!device) {
+  if (error)
+    throw new APIError({ message: "Unable to verify device ownership." });
+  if (!device)
     throw new APIError({
-      success: true,
-      message: "Device not found under given controllerDeviceId.",
-      statusCode: 200,
+      message: "Device does not belong to this controller.",
+      statusCode: 403,
     });
-  }
 
   await measureRequestTiming("db-control-log-insert", () =>
     database.insert(deviceControlLogs).values({

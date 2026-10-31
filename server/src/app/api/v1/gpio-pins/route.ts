@@ -15,7 +15,11 @@ export const GET = withRequestObservability(async (req: NextRequest) => {
 
     const params = validate({
       schema: GetGPIOPinsConfigSchema,
-      object: { mode, houseId },
+      object: {
+        mode,
+        houseId,
+        controllerDeviceId: req.nextUrl.searchParams.get("controllerDeviceId"),
+      },
     });
 
     const data = await getGPIOPins(params, user.id);

@@ -1,8 +1,4 @@
-import request, {
-  ApiConfig,
-  ExpectedHTTPStatuses,
-  HTTPStatus,
-} from "@/utils/network";
+import request, { ApiConfig, HTTPStatus } from "@/utils/network";
 import { useAuth } from "@clerk/expo";
 import { UseQueryResult, useQuery } from "@tanstack/react-query";
 import useRemoteUrl from "./use-remote-url";
@@ -11,11 +7,11 @@ const useApiQuery = <T>(
   url: string,
   config?: ApiConfig<T>,
 ): UseQueryResult<T, Error> => {
-  const { isSignedIn, getToken } = useAuth();
+  const { isSignedIn, getToken, userId } = useAuth();
   const remoteUrl = useRemoteUrl();
   const baseUrl = config?.baseUrl ?? remoteUrl ?? "";
   return useQuery({
-    queryKey: [url, config?.searchParams, config?.body],
+    queryKey: [url, config?.searchParams, config?.body, userId],
     queryFn: async () => {
       const token = await getToken();
       const headers: Record<string, string> = {
@@ -26,7 +22,7 @@ const useApiQuery = <T>(
         headers.Authorization = `Bearer ${token}`;
       }
       const response = await request(baseUrl, url, { ...config, headers });
-      if (!response.ok && !ExpectedHTTPStatuses.includes(response.status)) {
+      if (!response.ok) {
         const parsedRes = await response.json();
         let errorMessage =
           response.status + " : " + (parsedRes.message ?? response.statusText);

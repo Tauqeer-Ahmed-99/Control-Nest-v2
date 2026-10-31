@@ -1,21 +1,20 @@
 import { APIResponse } from "@/models/api";
 import { ControllerConfig } from "@/models/controller-config";
 import request, { HTTPMethod } from "./network";
+import { ApiRoutes } from "@/routes/routes";
 
 export const configControllerOnLocalNetwork = async ({
   localNetworkUrl,
-  userId,
-  controllerName,
+  apiKey,
   token,
 }: {
   localNetworkUrl: string;
-  userId: string;
-  controllerName: string;
+  apiKey: string;
   token: string;
 }) => {
-  const response = await request(localNetworkUrl, "/controller/configure", {
+  const response = await request(localNetworkUrl, ApiRoutes.ControllerConfigure, {
     method: HTTPMethod.POST,
-    body: { userId, controllerName } as any,
+    body: { apiKey } as any,
     headers: { authorization: token },
   });
 

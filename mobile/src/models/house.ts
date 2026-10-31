@@ -7,4 +7,5 @@ export type House = {
   name: string;
   houseMembers: HouseMember[];
   rooms: Room[];
+  controllerDevice: { id: string; name: string; houseId: string }[];
 } & Metadata;

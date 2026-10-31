@@ -1,5 +1,6 @@
 import os
 from typing import Annotated
+from services.controller_config import ControllerConfigService
 
 from clerk_backend_api.security import authenticate_request
 from clerk_backend_api.security.types import AuthenticateRequestOptions
@@ -51,4 +52,8 @@ def require_auth(
     user_id = str(state.payload["sub"]) # type: ignore
     access_token = str(state.token)
 
+    if ControllerConfigService().is_configured() and request.url.path != "/controller/configure":
+        from services.api import APIService
+        if not APIService().authorize_user(access_token):
+            raise HTTPException(status_code=403, detail="This account cannot access this house, or the controller key was revoked.")
     return user_id, access_token

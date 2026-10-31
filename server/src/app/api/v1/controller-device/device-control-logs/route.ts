@@ -9,7 +9,7 @@ import { measureRequestTiming } from "@/services/observability-context";
 
 export const POST = withRequestObservability(async (req: NextRequest) => {
   try {
-    await measureRequestTiming("auth-controller", () =>
+    const controller = await measureRequestTiming("auth-controller", () =>
       authenticateControllerDevice(req),
     );
 
@@ -20,7 +20,7 @@ export const POST = withRequestObservability(async (req: NextRequest) => {
       object: body,
     });
 
-    const data = await createLog(params);
+    const data = await createLog({ ...params, controllerDeviceId: controller.id });
 
     return APIResponse.fromData({
       data,

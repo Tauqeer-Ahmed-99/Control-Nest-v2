@@ -40,13 +40,16 @@ class JsonStore:
 
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
+        temporary_path = file_path.with_suffix(f".{os.getpid()}.tmp")
         try:
-            with file_path.open("w", encoding="utf-8") as file:
+            descriptor = os.open(str(temporary_path), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            os.chmod(temporary_path, 0o600)
+            with os.fdopen(descriptor, "w", encoding="utf-8") as file:
                 json.dump(data, file, indent=2)
-                return True
-        except FileNotFoundError:
-            print(f"Error: The file at {file_path} does not exist.")
-            return False
-        except PermissionError:
-            print("Error: No permissions to access this file.")        
+                file.flush()
+                os.fsync(file.fileno())
+            os.replace(temporary_path, file_path)
+            return True
+        except OSError:
+            temporary_path.unlink(missing_ok=True)
             return False

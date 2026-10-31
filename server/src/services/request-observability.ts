@@ -4,6 +4,7 @@ import { recordServerObservabilityEvent } from "./request-observability-store";
 import {
   getRequestTimings,
   getObservabilityUserId,
+  getObservabilityControllerId,
   runWithRequestContext,
 } from "./observability-context";
 
@@ -13,6 +14,7 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0
 
 const safeString = (value: string) =>
   value
+    .replace(/\bcn_[0-9a-f-]{36}\.[A-Za-z0-9_-]+/g, "[REDACTED]")
     .replace(/\b(Bearer|Basic)\s+[^\s"']+/gi, "$1 [REDACTED]")
     .replace(/\beyJ[a-zA-Z0-9_-]{10,}\.[\w-]{10,}\.[\w-]{10,}\b/g, "[REDACTED]")
     .replace(/([?&](?:access_token|token|api_key|key|password|secret)=)[^&\s]+/gi, "$1[REDACTED]")
@@ -160,7 +162,7 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
         output,
         error: errorFrom(response.status, output),
         userId: getObservabilityUserId() ?? null,
-        controllerDeviceId: controllerIdFromInput(input),
+        controllerDeviceId: getObservabilityControllerId() ?? (getObservabilityUserId() ? controllerIdFromInput(input) : null),
       };
 
       const path = new URL(request.url).pathname;

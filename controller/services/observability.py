@@ -36,6 +36,7 @@ def current_request_id() -> str:
 
 
 def _safe_string(value: str) -> str:
+    value = re.sub(r"\bcn_[0-9a-f-]{36}\.[A-Za-z0-9_-]+", "[REDACTED]", value)
     value = BEARER_SECRET.sub(r"\1 [REDACTED]", value)
     value = JWT_SECRET.sub("[REDACTED]", value)
     value = QUERY_SECRET.sub(r"\1[REDACTED]", value)

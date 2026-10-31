@@ -8,12 +8,12 @@ import { NextRequest } from "next/server";
 
 export const POST = withRequestObservability(async (req: NextRequest) => {
   try {
-    await authenticateControllerDevice(req);
+    const controller = await authenticateControllerDevice(req);
     const event = validate({
       schema: ControllerObservabilityEventSchema,
       object: await req.json(),
     });
-    const result = await recordControllerObservabilityEvent(event);
+    const result = await recordControllerObservabilityEvent({ ...event, controllerDeviceId: controller.id });
 
     if (result.error) throw result.error;
 
