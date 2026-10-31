@@ -347,18 +347,14 @@ export const removePhysicalDevice = async (
 };
 
 export const switchPhysicalDevice = async (
-  txn: DBTransaction,
+  controllerUrl: string,
   device: { deviceId: string; status: boolean },
   accessToken: string,
 ) => {
-  const url = await measureRequestTiming("db-controller-tunnel-lookup", () =>
-    getControllerDeviceUrlByDeviceId(device.deviceId, txn),
-  );
-
   const { success, message }: APIResponse = await measureRequestTiming(
     "controller-request",
     async () => {
-      const response = await fetch(`${url}/device/switch`, {
+      const response = await fetch(`${controllerUrl}/device/switch`, {
         method: "POST",
         body: JSON.stringify(device),
         headers: controllerRequestHeaders(accessToken),

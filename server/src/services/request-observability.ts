@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { NextRequest } from "next/server";
+import { after, NextRequest } from "next/server";
 import { recordServerObservabilityEvent } from "./request-observability-store";
 import {
   getRequestTimings,
@@ -163,42 +163,37 @@ export const withRequestObservability = <T extends (request: NextRequest) => Pro
         controllerDeviceId: controllerIdFromInput(input),
       };
 
-      const persistenceStartedAt = performance.now();
-      await recordServerObservabilityEvent(event);
-      const observabilityWriteMs = Math.max(
-        0,
-        performance.now() - persistenceStartedAt,
-      );
-      const previousServerTiming = response.headers.get("Server-Timing");
-      response.headers.set(
-        "Server-Timing",
-        [
-          previousServerTiming,
-          `observability-write;dur=${formatDuration(observabilityWriteMs)}`,
-        ]
-          .filter(Boolean)
-          .join(", "),
-      );
-
       const path = new URL(request.url).pathname;
-      if (
-        path === "/api/v1/device/switch" ||
-        path === "/api/v1/controller-device/device-control-logs"
-      ) {
-        console.info(
-          JSON.stringify({
-            type: "request-timing",
-            requestId,
-            path,
-            prePersistMs: Math.round(prePersistDurationMs),
-            spans: getRequestTimings().map(({ name, durationMs }) => ({
-              name,
-              durationMs: Math.round(durationMs * 10) / 10,
-            })),
-            observabilityWriteMs: Math.round(observabilityWriteMs * 10) / 10,
-          }),
+      const spans = getRequestTimings().map(({ name, durationMs }) => ({
+        name,
+        durationMs: Math.round(durationMs * 10) / 10,
+      }));
+
+      // Persist diagnostic events within the invocation without delaying the response.
+      after(async () => {
+        const persistenceStartedAt = performance.now();
+        await recordServerObservabilityEvent(event);
+        const observabilityWriteMs = Math.max(
+          0,
+          performance.now() - persistenceStartedAt,
         );
-      }
+
+        if (
+          path === "/api/v1/device/switch" ||
+          path === "/api/v1/controller-device/device-control-logs"
+        ) {
+          console.info(
+            JSON.stringify({
+              type: "request-timing",
+              requestId,
+              path,
+              prePersistMs: Math.round(prePersistDurationMs),
+              spans,
+              observabilityWriteMs: Math.round(observabilityWriteMs * 10) / 10,
+            }),
+          );
+        }
+      });
 
       return response;
     });

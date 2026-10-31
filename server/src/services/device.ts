@@ -1,5 +1,11 @@
 import database from "@/database";
-import { devices } from "@/database/schema";
+import {
+  controllerDevices,
+  devices,
+  houseMembers,
+  rooms,
+  tunnels,
+} from "@/database/schema";
 import { APIError } from "@/models/api";
 import { and, eq } from "drizzle-orm";
 import { authorizeHouse } from "./auth-house";
@@ -223,32 +229,64 @@ export const switchDevice = async (
   userId: string,
   accessToken: string,
 ) => {
-  const device = await measureRequestTiming("db-device-lookup", () =>
-    database.query.devices.findFirst({
-      where: { id: deviceId },
-      with: { room: true },
-    }),
+  const switchContext = await measureRequestTiming(
+    "db-switch-context-lookup",
+    async () => {
+      const [context] = await database
+        .select({
+          deviceId: devices.id,
+          roomId: rooms.id,
+          houseId: rooms.houseId,
+          memberUserId: houseMembers.userId,
+          tunnelHostname: tunnels.hostname,
+        })
+        .from(devices)
+        .leftJoin(rooms, eq(devices.roomId, rooms.id))
+        .leftJoin(
+          houseMembers,
+          and(
+            eq(houseMembers.houseId, rooms.houseId),
+            eq(houseMembers.userId, userId),
+          ),
+        )
+        .leftJoin(
+          controllerDevices,
+          eq(controllerDevices.houseId, rooms.houseId),
+        )
+        .leftJoin(
+          tunnels,
+          eq(tunnels.controllerDeviceId, controllerDevices.id),
+        )
+        .where(eq(devices.id, deviceId))
+        .limit(1);
+
+      return context;
+    },
   );
 
-  if (!device) {
+  if (!switchContext) {
     throw new APIError({
       message: "Device not found.",
       statusCode: 404,
     });
   }
 
-  const room = device.room;
-
-  if (!room) {
+  if (!switchContext.roomId || !switchContext.houseId) {
     throw new APIError({
       message: "Device room not found.",
       statusCode: 404,
     });
   }
 
-  await measureRequestTiming("db-house-authorization", () =>
-    authorizeHouse({ houseId: room.houseId, userId }),
-  );
+  if (!switchContext.memberUserId) {
+    throw new APIError({ message: "Unauthorized", statusCode: 403 });
+  }
+
+  const hostname = switchContext.tunnelHostname?.trim();
+  if (!hostname) {
+    throw new APIError({ message: "Tunnel hostname not found." });
+  }
+  const controllerUrl = `https://${hostname}`;
 
   const updatedDevice = await measureRequestTiming(
     "switch-transaction-total",
@@ -271,7 +309,7 @@ export const switchDevice = async (
         }
 
         await switchPhysicalDevice(
-          txn,
+          controllerUrl,
           { deviceId: updatedDevice.id, status: statusTo },
           accessToken,
         );
