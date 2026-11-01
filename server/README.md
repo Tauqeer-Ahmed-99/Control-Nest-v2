@@ -99,9 +99,10 @@ use `scheduledBy`. Older callbacks and system actions without a user retain the
 `CD-<controllerId>` fallback. Existing logs are unchanged.
 
 Authenticated clients can fetch `GET /api/v1/user?userId=<Clerk user ID>` for
-`id`, `fullName`, `firstName`, `lastName`, and `username`. The mobile
+`id`, `fullName`, `firstName`, `lastName`, `username`, and `imageUrl`. The mobile
 `useUserById` hook caches these profiles and the control-log list displays the
-full name, with a fallback when a profile is unavailable. Provider credentials
+full name and profile image, with a user icon if the image is unavailable and a
+controller icon for `CD-` entries. Provider credentials
 and private Clerk metadata are not returned. Deploy the server before updating
 controllers and the mobile app; full attribution requires the updated controller.
 

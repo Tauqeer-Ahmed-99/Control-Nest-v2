@@ -143,8 +143,8 @@ function userService(getUser) {
   });
 }
 
-test("user lookup returns full name and omits private Clerk fields", async () => {
-  const profile = { id: "user_other", fullName: "Other Member", firstName: "Other", lastName: "Member", username: null };
+test("user lookup returns full name and image URL and omits private Clerk fields", async () => {
+  const profile = { id: "user_other", fullName: "Other Member", firstName: "Other", lastName: "Member", username: null, imageUrl: "https://images.clerk.test/user_other.png" };
   const { getUserById } = userService(async (id) => {
     assert.equal(id, profile.id);
     return { ...profile, privateMetadata: { secret: "private" }, emailAddresses: [] };

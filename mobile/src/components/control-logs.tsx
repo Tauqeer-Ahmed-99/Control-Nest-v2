@@ -8,6 +8,7 @@ import useDeviceControlLogs, {
 import { useHouseData } from "@/hooks/use-house";
 import useUserById from "@/hooks/use-user-by-id";
 import { ApiRoutes } from "@/routes/routes";
+import Feather from "@expo/vector-icons/Feather";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
@@ -16,6 +17,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   FlatList,
+  Image,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -267,7 +269,10 @@ const LogItem = ({
   const resolveUserName = useClerkUserName();
   const { data: userResponse } = useUserById(logEntry.createdBy);
   const user = userResponse?.data;
-  const userName = logEntry.createdBy.startsWith("CD-")
+  const isController = logEntry.createdBy.startsWith("CD-");
+  const [failedImageUrl, setFailedImageUrl] = useState<string | null>(null);
+  const imageUrl = user?.imageUrl;
+  const userName = isController
     ? "Controller"
     : user?.fullName?.trim() ||
       [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
@@ -329,11 +334,35 @@ const LogItem = ({
             flexDirection: "row",
             justifyContent: "space-between",
             alignItems: "center",
+            gap: 12,
           }}
         >
-          <Text style={{ fontSize: 12, color: grey2 }}>
-            {userName}
-          </Text>
+          <View
+            style={{
+              flex: 1,
+              flexDirection: "row",
+              alignItems: "center",
+              gap: 8,
+            }}
+          >
+            {isController ? (
+              <Feather name="cpu" size={24} color={grey2} accessible={false} />
+            ) : imageUrl && imageUrl !== failedImageUrl ? (
+              <Image
+                key={imageUrl}
+                source={{ uri: imageUrl }}
+                style={{ width: 24, height: 24, borderRadius: 12 }}
+                resizeMode="cover"
+                accessible={false}
+                onError={() => setFailedImageUrl(imageUrl)}
+              />
+            ) : (
+              <Feather name="user" size={24} color={grey2} accessible={false} />
+            )}
+            <Text style={{ flexShrink: 1, fontSize: 12, color: grey2 }}>
+              {userName}
+            </Text>
+          </View>
           <Text style={{ fontSize: 11, color: grey2 }}>
             {formatDate(logEntry.createdAt)}
           </Text>

@@ -19,5 +19,6 @@ export const getUserById = async ({ userId }: { userId: string }) => {
     firstName: user.firstName,
     lastName: user.lastName,
     username: user.username,
+    imageUrl: user.imageUrl,
   };
 };

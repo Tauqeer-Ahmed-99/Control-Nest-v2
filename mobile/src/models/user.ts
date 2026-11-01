@@ -6,6 +6,7 @@ export type UserProfile = {
   firstName: string | null;
   lastName: string | null;
   username: string | null;
+  imageUrl: string | null;
 };
 
 export type GetUserByIdResponse = APIResponse<UserProfile>;
