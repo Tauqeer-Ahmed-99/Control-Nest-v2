@@ -1,234 +1,293 @@
-import useHouseControllers from "@/hooks/use-house-controllers";
+import Accordion from "./accordion";
+import { selectAvailablePin } from "@/utils/onboarding";
 import useAddDevice from "@/hooks/use-add-device";
 import useAvailableGPIOPins from "@/hooks/use-available-gpio-pins";
 import useHouse from "@/hooks/use-house";
-import { GPIOPinConfig } from "@/models/pin-header-config";
-import { Room } from "@/models/room";
+import useHouseControllers from "@/hooks/use-house-controllers";
 import { ApiRoutes } from "@/routes/routes";
 import { Button, Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
-import { useMemo, useState } from "react";
-import { ToastAndroid, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { useState } from "react";
+import { View } from "react-native";
 import InputField from "./input-field";
-import MessageContainer from "./message-container";
-import Select from "./select";
 import { FormSkeleton } from "./loading-placeholders";
-import LoadingSkeleton from "./loading-skeleton";
+import Select from "./select";
 
-const AddDeviceForm = ({ closeForm }: { closeForm: () => void }) => {
-  const {
-    theme: {
-      colors: { secondary },
-    },
-  } = useTheme();
-
-  const { roomId } = useLocalSearchParams();
+export default function AddDeviceForm({
+  closeForm,
+  onAddRoom,
+}: {
+  closeForm: () => void;
+  onAddRoom?: () => void;
+}) {
+  const { theme } = useTheme();
+  const { roomId } = useLocalSearchParams<{ roomId?: string }>();
   const houseQuery = useHouse();
-  const rooms = useMemo(
-    () =>
-      houseQuery.data?.details == null
-        ? (houseQuery.data?.data?.rooms ?? [])
-        : [],
-    [houseQuery.data],
-  );
-  const room = useMemo(
-    () => rooms?.find((room) => room.id === roomId),
-    [roomId, rooms],
-  );
-  const [selectedRoomState, setSelectedRoom] = useState<Room | null>(
-    room ?? (rooms?.[0] as Room) ?? null,
-  );
-  const selectedRoom = selectedRoomState ?? room ?? rooms[0] ?? null;
-  const controllersQuery = useHouseControllers(selectedRoom?.houseId ?? "");
-  const controllers = (controllersQuery.data?.data ?? []).filter(
-    (controller) => controller.paired && controller.apiKeyLastFour,
-  );
+  const house = houseQuery.data?.success ? houseQuery.data.data : null;
+  const rooms = house?.rooms ?? [];
+  const [selectedRoomId, setRoomId] = useState(roomId ?? "");
+  const selectedRoom =
+    rooms.find((item) => item.id === selectedRoomId) ?? rooms[0];
+  const controllersQuery = useHouseControllers(house?.id ?? "");
+  const controllers = (
+    controllersQuery.data?.success ? controllersQuery.data.data : []
+  ).filter((item) => item.paired && item.apiKeyLastFour);
   const [controllerId, setControllerId] = useState("");
-  const selectedController =
-    controllers.find((controller) => controller.id === controllerId) ??
-    controllers[0];
-  const [deviceName, setDeviceName] = useState("");
-  const [deviceRating, setDeviceRating] = useState("");
-  const { data: availableGPIOPins, isLoading: isLoadingAvailableGPIOPins } =
-    useAvailableGPIOPins({
-      houseId: selectedRoom?.houseId ?? "",
-      controllerDeviceId: selectedController?.id ?? "",
-    });
-
-  const gpioPin = useMemo(
-    () => availableGPIOPins?.data?.[0],
-    [availableGPIOPins?.data],
-  );
-
-  const [selectedGPIOPinState, setSelectedGPIOPin] =
-    useState<GPIOPinConfig | null>(gpioPin ?? null);
-  const selectedGPIOPin = selectedGPIOPinState ?? gpioPin ?? null;
-
-  const { mutate: addDevice, isPending } = useAddDevice();
-
+  const controller =
+    controllers.find((item) => item.id === controllerId) ?? controllers[0];
+  const pinsQuery = useAvailableGPIOPins({
+    houseId: house?.id ?? "",
+    controllerDeviceId: controller?.id ?? "",
+  });
+  const pins = (pinsQuery.data?.success ? pinsQuery.data.data : [])
+    .slice()
+    .sort((a, b) => a.headerPinNumber - b.headerPinNumber);
+  const [pinSelection, setPinSelection] = useState<{
+    controllerId: string;
+    number: number;
+  } | null>(null);
+  const pin = selectAvailablePin(pins, controller?.id, pinSelection);
+  const [step, setStep] = useState(1);
+  const [name, setName] = useState("");
+  const [rating, setRating] = useState("");
+  const [showRating, setShowRating] = useState(false);
+  const [error, setError] = useState("");
+  const mutation = useAddDevice();
   const queryClient = useQueryClient();
-
-  const handleSaveDevice = () => {
-    if (!selectedRoom || !selectedGPIOPin || !selectedController) {
-      return;
-    }
-
-    addDevice(
-      {
-        roomId: selectedRoom.id,
-        controllerDeviceId: selectedController.id,
-        pinNumber: selectedGPIOPin.headerPinNumber,
-        gpioPinNumber: selectedGPIOPin.gpioPinNumber,
-        deviceName,
-        wattage: isNaN(Number(deviceRating)) ? 0.0 : Number(deviceRating),
-      },
-      {
-        onSuccess: (res) => {
-          if (res.success) {
-            queryClient.invalidateQueries({ queryKey: [ApiRoutes.UserHouse] });
-          } else {
-            ToastAndroid.show(res.message, ToastAndroid.LONG);
-          }
-          closeForm();
-        },
-        onError: (res) => {
-          ToastAndroid.show(res.message, ToastAndroid.LONG);
-        },
-      },
-    );
-  };
-
-  if (houseQuery.isLoading) {
-    return (
-      <View
-        style={{
-          padding: 20,
-          paddingBottom: 28,
-          borderTopRightRadius: 24,
-          borderTopLeftRadius: 24,
-          backgroundColor: secondary,
-          gap: 16,
-        }}
-        accessible={false}
-        accessibilityElementsHidden
-      >
-        <LoadingSkeleton height={24} width="54%" />
-        <FormSkeleton fields={roomId ? 3 : 4} showActions />
-      </View>
-    );
-  }
-
-  if (houseQuery.error) {
-    return <MessageContainer message={houseQuery.error.message} />;
-  }
-
-  if (!rooms.length) {
-    return (
-      <View>
-        <MessageContainer message="Please add rooms first on home screen, then add the devices." />
-      </View>
-    );
-  }
+  const validRating =
+    !rating.trim() || (Number.isFinite(Number(rating)) && Number(rating) >= 0);
+  const queryError =
+    controllersQuery.error?.message ??
+    pinsQuery.error?.message ??
+    (controllersQuery.data?.success === false
+      ? controllersQuery.data.message
+      : pinsQuery.data?.success === false
+        ? pinsQuery.data.message
+        : "");
 
   return (
-    <View
-      style={{
-        padding: 20,
-        paddingBottom: 28,
-        borderTopRightRadius: 24,
-        borderTopLeftRadius: 24,
-        backgroundColor: secondary,
-        gap: 16,
-      }}
-    >
-      <Text
-        style={{
-          textAlign: "center",
-          fontSize: 20,
-          fontFamily: "Lexend_600SemiBold",
-        }}
-      >
-        Add New Device
-      </Text>
-      {!roomId && (
-        <Select
-          label="Room"
-          items={rooms}
-          field="name"
-          onValueChange={(newValue: Room) => setSelectedRoom(newValue)}
-          selectedValue={selectedRoom}
-        />
+    <View style={{ padding: 20, gap: 20 }}>
+      {houseQuery.isLoading ? (
+        <FormSkeleton fields={2} showActions />
+      ) : houseQuery.error || !house ? (
+        <>
+          <Text accessibilityRole="alert" style={{ color: theme.colors.error }}>
+            Couldn&apos;t load this house.
+          </Text>
+          <Button type="outline" onPress={() => void houseQuery.refetch()}>
+            Try again
+          </Button>
+        </>
+      ) : !rooms.length ? (
+        <>
+          <Text style={{ color: theme.colors.grey2, lineHeight: 24 }}>
+            Add a room for your first device.
+          </Text>
+          {onAddRoom && <Button onPress={onAddRoom}>Add a room</Button>}
+        </>
+      ) : (
+        <>
+          <Text style={{ color: theme.colors.grey2, fontSize: 14 }}>
+            Step {step} of 2 -{" "}
+            {step === 1 ? "Name and room" : "Controller and pin"}
+          </Text>
+          {step === 1 ? (
+            <>
+              <InputField
+                label="Device name"
+                placeholder="e.g. Ceiling light"
+                value={name}
+                onChangeText={setName}
+                containerStyle={{ paddingHorizontal: 0 }}
+              />
+              <Select
+                label="Room"
+                field="name"
+                items={rooms}
+                selectedValue={selectedRoom}
+                onValueChange={(item) => setRoomId(item.id)}
+              />
+              <Button
+                disabled={!name.trim() || !selectedRoom}
+                onPress={() => setStep(2)}
+              >
+                Continue
+              </Button>
+            </>
+          ) : (
+            <>
+              <Text style={{ fontSize: 16, fontFamily: "Lexend_500Medium" }}>
+                {name.trim()} - {selectedRoom.name}
+              </Text>
+              <Select
+                label="Controller"
+                field="name"
+                items={controllers}
+                selectedValue={controller}
+                isLoading={controllersQuery.isLoading}
+                disabled={mutation.isPending}
+                onValueChange={(item) => {
+                  setControllerId(item.id);
+                  setPinSelection(null);
+                  setError("");
+                }}
+              />
+              {!controllersQuery.isLoading &&
+              !controllers.length &&
+              !queryError ? (
+                <>
+                  <Text style={{ color: theme.colors.grey2, lineHeight: 22 }}>
+                    Connect a controller before adding devices.
+                  </Text>
+                  <Button
+                    type="outline"
+                    onPress={() => {
+                      closeForm();
+                      router.push({
+                        pathname: "/house-login",
+                        params: { houseId: house.id },
+                      });
+                    }}
+                  >
+                    Connect a controller
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Select
+                    label="Header pin"
+                    field="headerPinNumber"
+                    items={pins}
+                    selectedValue={pin}
+                    isLoading={pinsQuery.isLoading}
+                    disabled={mutation.isPending}
+                    onValueChange={(item) =>
+                      setPinSelection({
+                        controllerId: controller!.id,
+                        number: item.headerPinNumber,
+                      })
+                    }
+                  />
+                  {!pinsQuery.isLoading &&
+                    controller &&
+                    !pins.length &&
+                    !queryError && (
+                      <Text style={{ color: theme.colors.grey2 }}>
+                        No free pins. Choose another controller.
+                      </Text>
+                    )}
+                  <Accordion
+                    title="Power rating (optional)"
+                    summary={
+                      rating ? `${rating} W` : "Used to estimate energy usage"
+                    }
+                    icon="zap"
+                    expanded={showRating}
+                    disabled={mutation.isPending}
+                    onToggle={() => {
+                      if (!mutation.isPending) setShowRating((value) => !value);
+                    }}
+                  >
+                    <InputField
+                      label="Power rating (W)"
+                      placeholder="e.g. 60"
+                      value={rating}
+                      onChangeText={setRating}
+                      keyboardType="decimal-pad"
+                      disabled={mutation.isPending}
+                    />
+                  </Accordion>
+                  {!validRating && (
+                    <Text
+                      accessibilityRole="alert"
+                      style={{ color: theme.colors.error }}
+                    >
+                      Enter a power rating of zero or more.
+                    </Text>
+                  )}
+                </>
+              )}
+              {!!queryError && (
+                <>
+                  <Text
+                    accessibilityRole="alert"
+                    style={{ color: theme.colors.error }}
+                  >
+                    {queryError}
+                  </Text>
+                  <Button
+                    type="outline"
+                    onPress={() => {
+                      void controllersQuery.refetch();
+                      if (controller) void pinsQuery.refetch();
+                    }}
+                  >
+                    Try again
+                  </Button>
+                </>
+              )}
+              {!!error && (
+                <Text
+                  accessibilityRole="alert"
+                  style={{ color: theme.colors.error }}
+                >
+                  {error}
+                </Text>
+              )}
+              <Button
+                loading={mutation.isPending}
+                disabled={
+                  mutation.isPending ||
+                  !controller ||
+                  !pin ||
+                  !validRating ||
+                  !!queryError
+                }
+                onPress={() => {
+                  if (!controller || !pin || !selectedRoom) return;
+                  setError("");
+                  mutation.mutate(
+                    {
+                      roomId: selectedRoom.id,
+                      controllerDeviceId: controller.id,
+                      pinNumber: pin.headerPinNumber,
+                      gpioPinNumber: pin.gpioPinNumber,
+                      deviceName: name.trim(),
+                      wattage: Number(rating) || 0,
+                    },
+                    {
+                      onSuccess: (result) => {
+                        if (!result.success) {
+                          setError(result.message);
+                          return;
+                        }
+                        void queryClient.invalidateQueries({
+                          queryKey: [ApiRoutes.UserHouse],
+                        });
+                        void queryClient.invalidateQueries({
+                          queryKey: [ApiRoutes.AvailableGPIOPins],
+                        });
+                        closeForm();
+                      },
+                      onError: (cause) => setError(cause.message),
+                    },
+                  );
+                }}
+              >
+                Add device
+              </Button>
+              <Button
+                type="clear"
+                disabled={mutation.isPending}
+                onPress={() => setStep(1)}
+              >
+                Back
+              </Button>
+            </>
+          )}
+        </>
       )}
-      <Select
-        label="Controller"
-        items={controllers}
-        field="name"
-        selectedValue={selectedController}
-        isLoading={controllersQuery.isLoading}
-        onValueChange={(value) => {
-          setControllerId(value.id);
-          setSelectedGPIOPin(null);
-        }}
-      />
-      {!controllersQuery.isLoading && !controllers.length && (
-        <Text>Pair a controller in Settings / Houses & controllers first.</Text>
-      )}
-      <Select
-        label="Header Pin Number"
-        items={[...(availableGPIOPins?.data ?? [])].sort(
-          (a, b) => a.headerPinNumber - b.headerPinNumber,
-        )}
-        field="headerPinNumber"
-        onValueChange={(newValue: GPIOPinConfig) =>
-          setSelectedGPIOPin(newValue)
-        }
-        isLoading={isLoadingAvailableGPIOPins}
-        selectedValue={selectedGPIOPin}
-      />
-      {availableGPIOPins?.data?.length === 0 && (
-        <Text>
-          No free GPIO pins on this controller. Choose another controller.
-        </Text>
-      )}
-      <InputField
-        label="Device Name"
-        placeholder="Enter device name"
-        defaultValue=""
-        onChangeText={(text) => setDeviceName(text)}
-        disabled={isPending}
-      />
-      <InputField
-        label="Power consumption"
-        placeholder="Enter in watt"
-        defaultValue=""
-        onChangeText={(text) => setDeviceRating(text)}
-        disabled={isPending}
-        keyboardType="number-pad"
-      />
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "flex-end",
-          gap: 16,
-          paddingHorizontal: 16,
-        }}
-      >
-        <Button type="clear" disabled={isPending} onPress={closeForm}>
-          Cancel
-        </Button>
-        <Button
-          loading={isPending}
-          disabled={
-            !selectedController || !selectedGPIOPin || !deviceName.trim()
-          }
-          onPress={handleSaveDevice}
-        >
-          Save
-        </Button>
-      </View>
     </View>
   );
-};
-
-export default AddDeviceForm;
+}

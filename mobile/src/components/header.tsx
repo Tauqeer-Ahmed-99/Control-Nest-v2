@@ -1,7 +1,6 @@
 import FontAwesome from "@expo/vector-icons/FontAwesome";
-import { Text } from "@rneui/themed";
+import { Text, useTheme } from "@rneui/themed";
 import { TouchableOpacity, View } from "react-native";
-import { useTheme } from "@rneui/themed";
 
 const Header = ({
   heading,
@@ -57,7 +56,11 @@ const Header = ({
             >
               View All
             </Text>
-            <FontAwesome name="arrow-right" size={14} color={theme.colors.success} />
+            <FontAwesome
+              name="arrow-right"
+              size={14}
+              color={theme.colors.success}
+            />
           </View>
         </TouchableOpacity>
       )}

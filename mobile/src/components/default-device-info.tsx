@@ -29,7 +29,14 @@ const DefaultDeviceInfo = ({
           justifyContent: "space-between",
         }}
       >
-        <Text style={{ fontSize: 16 }}>Default</Text>
+        <View style={{ flex: 1, gap: 4, paddingRight: 12 }}>
+          <Text style={{ fontSize: 16 }}>Room shortcut</Text>
+          <Text
+            style={{ color: theme.colors.grey2, fontSize: 13, lineHeight: 20 }}
+          >
+            Control this device from the room card.
+          </Text>
+        </View>
         <View
           style={{
             height: 45,
@@ -43,6 +50,7 @@ const DefaultDeviceInfo = ({
           }}
         >
           <Switch
+            accessibilityLabel="Use as room shortcut"
             value={device?.isDefault ?? false}
             onChange={handleOnChange}
           />

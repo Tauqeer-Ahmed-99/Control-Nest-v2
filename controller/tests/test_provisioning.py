@@ -124,6 +124,28 @@ class ProvisioningTests(unittest.TestCase):
         cloud.initialize_cloudflared_tunnel.assert_called_once()
         hardware.initialize.assert_called_once()
 
+    def test_control_log_callback_includes_the_requesting_user(self):
+        self.config.save_controller_config(self.private)
+        asyncio.run(self.api_module.APIService().create_device_control_log(
+            "controller-a", "device-a", False, True, "user_requester",
+        ))
+        sent = self.requests.post.call_args.kwargs
+        self.assertEqual(sent["json"], {
+            "controllerDeviceId": "controller-a",
+            "deviceId": "device-a",
+            "statusFrom": False,
+            "statusTo": True,
+            "userId": "user_requester",
+        })
+        self.assertEqual(sent["headers"]["Authorization"], "Bearer cn_controller-a.private-api-key")
+
+    def test_system_control_log_can_omit_the_user(self):
+        self.config.save_controller_config(self.private)
+        asyncio.run(self.api_module.APIService().create_device_control_log(
+            "controller-a", "device-a", True, False,
+        ))
+        self.assertIsNone(self.requests.post.call_args.kwargs["json"]["userId"])
+
     def test_setup_refuses_to_overwrite_another_controller(self):
         self.config.save_controller_config(self.private)
         api = types.SimpleNamespace(init_controller=Mock())

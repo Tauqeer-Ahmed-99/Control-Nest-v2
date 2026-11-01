@@ -66,11 +66,11 @@ class APIService:
         except (requests.RequestException, ValueError, APIError):
             return False
 
-    async def create_device_control_log(self, controller_device_id: str, device_id: str, status_from: bool, status_to: bool):
+    async def create_device_control_log(self, controller_device_id: str, device_id: str, status_from: bool, status_to: bool, user_id: str | None = None):
         try:
             requests.post(
                 f"{self.base_url}/api/v1/controller-device/device-control-logs",
-                json={"controllerDeviceId": controller_device_id, "deviceId": device_id, "statusFrom": status_from, "statusTo": status_to},
+                json={"controllerDeviceId": controller_device_id, "deviceId": device_id, "statusFrom": status_from, "statusTo": status_to, "userId": user_id},
                 headers=self.request_headers(), timeout=10,
             )
         except (requests.RequestException, APIError):

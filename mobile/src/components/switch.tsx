@@ -1,3 +1,4 @@
+import useAccessibilityPreferences from "@/hooks/use-accessibility-preferences";
 import Feather from "@expo/vector-icons/Feather";
 import { useTheme } from "@rneui/themed";
 import React, { useCallback, useEffect, useRef, useState } from "react";
@@ -26,32 +27,43 @@ const Switch: React.FC<SwitchProps> = ({
   accessibilityLabel = "Power",
 }) => {
   const { theme } = useTheme();
+  const { reduceMotion } = useAccessibilityPreferences();
 
-  const [animationValue] = useState(
-    () => new Animated.Value(value ? 1 : 0),
-  );
+  const [animationValue] = useState(() => new Animated.Value(value ? 1 : 0));
 
   // The ref tracks a tap while its animation is running. The prop remains the
   // source of truth when data changes elsewhere, such as on another screen.
   const isOnRef = useRef(value);
 
+  const animateTo = useCallback(
+    (next: boolean) => {
+      if (reduceMotion) animationValue.setValue(next ? 1 : 0);
+      else
+        Animated.spring(animationValue, {
+          toValue: next ? 1 : 0,
+          stiffness: 300,
+          damping: 32,
+          mass: 1,
+          useNativeDriver: false,
+        }).start();
+    },
+    [animationValue, reduceMotion],
+  );
+
   useEffect(() => {
     isOnRef.current = value;
-    animationValue.setValue(value ? 1 : 0);
-  }, [animationValue, value]);
+    // An optimistic prop update acknowledges the tap; it must not snap the
+    // thumb to its destination before its spring has finished.
+    animateTo(value);
+  }, [animateTo, value]);
 
   const toggleSwitch = useCallback(() => {
     const next = !isOnRef.current;
     isOnRef.current = next;
 
-    Animated.timing(animationValue, {
-      toValue: next ? 1 : 0,
-      duration: 100,
-      useNativeDriver: false,
-    }).start(() => {
-      onChange(next);
-    });
-  }, [animationValue, onChange]);
+    animateTo(next);
+    onChange(next);
+  }, [animateTo, onChange]);
 
   const switchColor = animationValue.interpolate({
     inputRange: [0, 1],

@@ -337,7 +337,7 @@ export const switchDevice = async (
 
         await switchPhysicalDevice(
           controllerUrl,
-          { deviceId: updatedDevice.id, status: statusTo },
+          { deviceId: updatedDevice.id, status: statusTo, userId },
           accessToken,
         );
 

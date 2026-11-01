@@ -92,8 +92,9 @@ import { View } from "react-native";
 // export default Notifications;
 
 const Notifications = () => {
-  const { data: config, isLoading } =
-    useGetMobileStorageData<ControllerConfig>(CONTROLLER_DEVICE_CONFIG);
+  const { data: config, isLoading } = useGetMobileStorageData<ControllerConfig>(
+    CONTROLLER_DEVICE_CONFIG,
+  );
   const houseId = config?.house?.id;
   const { theme } = useTheme();
 
@@ -121,7 +122,7 @@ const Notifications = () => {
           padding: 16,
         }}
       >
-        <MessageContainer message="Connect to a house to view notifications." />
+        <MessageContainer message="Choose a house to see its device activity." />
       </View>
     );
   }

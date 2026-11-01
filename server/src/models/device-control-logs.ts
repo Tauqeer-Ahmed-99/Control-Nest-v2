@@ -5,6 +5,7 @@ export const CreateDeviceControlLogSchema = z.object({
   deviceId: z.uuidv4().nonempty().nonoptional(),
   statusFrom: z.boolean(),
   statusTo: z.boolean(),
+  userId: z.string().trim().nonempty().nullish(),
 });
 
 export const SearchDeviceControlLogs = z.object({

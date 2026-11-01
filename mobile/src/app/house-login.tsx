@@ -1,67 +1,59 @@
-import Header from "@/components/header";
-import InputField from "@/components/input-field";
-import Select from "@/components/select";
+import { canRestoreHouse } from "@/utils/onboarding";
+import ChoiceRow from "@/components/choice-row";
+import ControllerSetup from "@/components/controller-setup";
+import FlowScreen, { FlowHeading } from "@/components/flow-screen";
 import LoadingSkeleton from "@/components/loading-skeleton";
-import { CONTROLLER_DEVICE_CONFIG } from "@/constants/storage";
+import {
+  CONTROLLER_DEVICE_CONFIG,
+  CONTROLLER_DEVICE_URL,
+} from "@/constants/storage";
 import { SERVER_URL } from "@/constants/urls";
-import { useAutoPiDiscovery } from "@/hooks/use-autopi-discovery";
 import useApiQuery from "@/hooks/use-api-query";
-import useConfigController from "@/hooks/use-config-controller";
 import useHouseControllers from "@/hooks/use-house-controllers";
-import { useSetMobileStorageData } from "@/hooks/use-mobile-storage-data";
+import {
+  useGetMobileStorageData,
+  useSetMobileStorageData,
+} from "@/hooks/use-mobile-storage-data";
 import { APIResponse } from "@/models/api";
 import { ControllerConfig } from "@/models/controller-config";
 import { UserHouse } from "@/models/onboarding";
 import { ApiRoutes } from "@/routes/routes";
-import Feather from "@expo/vector-icons/Feather";
+import { useClerk, useUser } from "@clerk/expo";
 import { Button, Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
-import { Link, router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import {
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
-  TouchableOpacity,
-  View,
-} from "react-native";
+import { Linking, View } from "react-native";
 
 export default function HouseLogin() {
   const { theme } = useTheme();
-  const colors = theme.colors;
+  const { user } = useUser();
+  const { signOut } = useClerk();
   const queryClient = useQueryClient();
+  const params = useLocalSearchParams<{ houseId?: string }>();
+  const [houseId, setHouseId] = useState(params.houseId ?? "");
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
   const housesQuery = useApiQuery<APIResponse<UserHouse[]>>(ApiRoutes.Houses, {
     queryConfig: { staleTime: 0 },
   });
-  const houses = housesQuery.data?.data ?? [];
-  const [houseId, setHouseId] = useState("");
-  const house = houses.find((item) => item.id === houseId) ?? houses[0];
+  const houses = housesQuery.data?.success ? housesQuery.data.data : [];
+  const house = houses.find((item) => item.id === houseId);
   const controllersQuery = useHouseControllers(house?.id ?? "");
-  const controllers = controllersQuery.data?.data ?? [];
-  const { devices, isScanning, permissionDenied } = useAutoPiDiscovery();
-  const [device, setDevice] = useState<(typeof devices)[number] | null>(null);
-  const [apiKey, setApiKey] = useState("");
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const [saving, setSaving] = useState(false);
+  const controllers = controllersQuery.data?.success
+    ? controllersQuery.data.data
+    : [];
+  const { data: savedConfig } = useGetMobileStorageData<ControllerConfig>(
+    CONTROLLER_DEVICE_CONFIG,
+  );
+  const hasSavedHouse = canRestoreHouse(savedConfig, user?.id);
   const { mutateAsync: saveConfig } = useSetMobileStorageData<ControllerConfig>(
     CONTROLLER_DEVICE_CONFIG,
   );
-  const address = device?.addresses[0];
-  const pairing = useConfigController(
-    address
-      ? `http://${address.includes(":") ? `[${address}]` : address}:${device?.port}`
-      : SERVER_URL,
+  const { mutateAsync: clearControllerUrl } = useSetMobileStorageData<null>(
+    CONTROLLER_DEVICE_URL,
   );
-  const card = {
-    backgroundColor: colors.secondary,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: colors.greyOutline,
-    padding: 20,
-    gap: 16,
-  } as const;
-  const heading = { fontSize: 20, fontFamily: "Lexend_600SemiBold" } as const;
 
   async function openHouse() {
     if (!house) return;
@@ -70,6 +62,7 @@ export default function HouseLogin() {
     try {
       const controller = controllers.find((item) => item.paired && item.tunnel);
       await saveConfig({
+        userId: user?.id,
         house,
         controllerDevice: controller ?? {
           id: "",
@@ -78,237 +71,211 @@ export default function HouseLogin() {
         },
         tunnel: { hostname: controller?.tunnel?.hostname ?? "" },
       });
-      await queryClient.invalidateQueries({
-        queryKey: ["mobile-storage", CONTROLLER_DEVICE_CONFIG],
-      });
-      await queryClient.invalidateQueries({ queryKey: [ApiRoutes.UserHouse] });
+      await clearControllerUrl(null);
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["mobile-storage"] }),
+        queryClient.invalidateQueries({ queryKey: [ApiRoutes.UserHouse] }),
+      ]);
       router.replace("/(tabs)/home");
     } catch {
-      setError("Unable to save your house selection. Please try again.");
+      setError("Couldn't open this house. Try again.");
     } finally {
       setSaving(false);
     }
   }
-  async function pairController() {
-    if (!device || !address) {
-      setError("Select a controller on your Wi-Fi first.");
+
+  function back() {
+    if (isConnecting) {
+      setIsConnecting(false);
       return;
     }
-    if (!/^cn_[0-9a-f-]{36}\.[A-Za-z0-9_-]{43}$/.test(apiKey.trim())) {
-      setError("Paste the complete API key from My houses on the website.");
+    if (houseId) {
+      setHouseId("");
+      setError("");
       return;
     }
-    setError("");
-    setNotice("");
+    router.replace("/(tabs)/home");
+  }
+
+  if (house && isConnecting)
+    return (
+      <ControllerSetup
+        house={house}
+        onBack={back}
+        onConnected={async () => {
+          await controllersQuery.refetch();
+          setIsConnecting(false);
+        }}
+      />
+    );
+
+  const queryError = house
+    ? (controllersQuery.error?.message ??
+      (controllersQuery.data?.success === false
+        ? controllersQuery.data.message
+        : ""))
+    : (housesQuery.error?.message ??
+      (housesQuery.data?.success === false ? housesQuery.data.message : ""));
+
+  async function openDashboard() {
     try {
-      const result = await pairing.mutateAsync({ apiKey: apiKey.trim() });
-      if (!result.success) throw new Error(result.message);
-      setApiKey("");
-      setDevice(null);
-      setHouseId(result.data.house.id);
-      setNotice(
-        `${result.data.controllerDevice.name} is connected to ${result.data.house.name}. You can now add devices to it.`,
-      );
-      await housesQuery.refetch();
-      await queryClient.invalidateQueries({
-        queryKey: [ApiRoutes.HouseControllers],
-      });
-    } catch (e) {
-      setError(
-        e instanceof Error
-          ? e.message
-          : "Unable to pair this controller. Try again.",
-      );
-    } finally {
-      pairing.reset();
+      await Linking.openURL(`${SERVER_URL}/dashboard`);
+    } catch {
+      setError("Couldn't open the website. Try again.");
     }
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: colors.primary }}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    <FlowScreen
+      title={house ? house.name : "Your houses"}
+      onBack={houseId || hasSavedHouse ? back : undefined}
+      busy={saving}
     >
-      <ScrollView
-        contentContainerStyle={{ padding: 20, paddingBottom: 48, gap: 20 }}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Header heading="Houses & controllers" />
-        <Text style={{ color: colors.grey2 }}>
-          Sign in with the same email you used on the website. Choose your
-          house, or connect another Raspberry Pi.
-        </Text>
-        {(error || housesQuery.error || controllersQuery.error) && (
-          <Text accessibilityRole="alert" style={{ color: colors.error }}>
-            {error ||
-              housesQuery.error?.message ||
-              controllersQuery.error?.message}
+      <FlowHeading
+        title={house ? "Controllers" : "Choose your house"}
+        description={
+          house
+            ? "All controllers in this house work together."
+            : "Open a house to control its rooms and devices."
+        }
+      />
+      {!!(error || queryError) && (
+        <View style={{ gap: 8 }}>
+          <Text accessibilityRole="alert" style={{ color: theme.colors.error }}>
+            {error || queryError}
           </Text>
-        )}
-        {notice !== "" && (
-          <Text
-            accessibilityLiveRegion="polite"
-            style={{ color: colors.success }}
-          >
-            {notice}
-          </Text>
-        )}
-        <View style={card}>
-          <Text style={heading}>Your house</Text>
-          {housesQuery.isLoading ? (
-            <LoadingSkeleton height={52} width="100%" />
-          ) : house ? (
-            <>
-              <Select
-                label="House"
-                field="name"
-                items={houses}
-                selectedValue={house}
-                onValueChange={(value: UserHouse) => {
-                  setHouseId(value.id);
-                  setError("");
-                }}
-              />
-              <Text style={{ color: colors.grey2 }}>
-                {controllers.length} controller
-                {controllers.length === 1 ? "" : "s"} in this house. Devices in
-                all rooms are available together.
-              </Text>
-              {controllers.map((controller) => (
-                <View
-                  key={controller.id}
-                  style={{
-                    flexDirection: "row",
-                    gap: 12,
-                    alignItems: "center",
-                  }}
-                >
-                  <Feather name="cpu" size={20} color={colors.success} />
-                  <View style={{ flex: 1 }}>
-                    <Text style={{ fontFamily: "Lexend_500Medium" }}>
-                      {controller.name}
-                    </Text>
-                    <Text style={{ color: colors.grey2, fontSize: 12 }}>
-                      {!controller.apiKeyLastFour
-                        ? "Needs an API key"
-                        : controller.paired
-                          ? "Paired"
-                          : "Ready to pair"}
-                    </Text>
-                  </View>
-                </View>
-              ))}
-              <Button
-                loading={saving}
-                disabled={pairing.isPending || controllersQuery.isLoading}
-                onPress={() => void openHouse()}
-              >
-                Open house
-              </Button>
-            </>
-          ) : (
-            <Text style={{ color: colors.grey2 }}>
-              Create a house on the website, then add a named controller to
-              generate its API key.
-            </Text>
-          )}
-          <Link href={`${SERVER_URL}/dashboard` as `https://${string}`} asChild>
-            <Button type="outline">Manage houses on website</Button>
-          </Link>
           <Button
-            type="clear"
+            type="outline"
             onPress={() => {
-              void housesQuery.refetch();
-              void controllersQuery.refetch();
+              setError("");
+              void (house ? controllersQuery.refetch() : housesQuery.refetch());
             }}
           >
-            Refresh houses & controllers
+            Try again
           </Button>
         </View>
-        <View style={card}>
-          <Text style={heading}>Connect a Raspberry Pi</Text>
-          <Text style={{ color: colors.grey2 }}>
-            1. On the website, add a controller to your house and copy its API
-            key.
-          </Text>
-          <Text style={{ color: colors.grey2 }}>
-            2. Keep your phone and Pi on the same trusted Wi-Fi. Select the Pi
-            below.
-          </Text>
-          {permissionDenied && (
-            <Text style={{ color: colors.warning }}>
-              Allow local network access in your phone settings to find
-              controllers.
-            </Text>
-          )}
-          {!devices.length && (
-            <Text style={{ color: colors.grey2 }}>
-              {isScanning
-                ? "Looking for controllers..."
-                : "No controllers found. Check the Pi is powered on and AutoPiHub is running."}
-            </Text>
-          )}
-          {devices.map((item) => (
-            <TouchableOpacity
-              key={item.name}
-              accessibilityRole="button"
-              accessibilityState={{ selected: device?.name === item.name }}
-              onPress={() => setDevice(item)}
+      )}
+      <View style={{ gap: 12 }}>
+        {housesQuery.isLoading || (house && controllersQuery.isLoading) ? (
+          <>
+            <LoadingSkeleton height={84} width="100%" />
+            <LoadingSkeleton height={84} width="100%" />
+          </>
+        ) : house ? (
+          <>
+            {controllers.map((controller) => (
+              <ChoiceRow
+                key={controller.id}
+                title={controller.name}
+                icon={controller.paired ? "check-circle" : "cpu"}
+                detail={
+                  controller.paired
+                    ? "Connected"
+                    : controller.apiKeyLastFour
+                      ? "Ready to connect"
+                      : "Create an API key on the website"
+                }
+              />
+            ))}
+            {!controllers.length && (
+              <ChoiceRow
+                title="No controllers yet"
+                detail={
+                  house.isAdmin
+                    ? "Connect your first Raspberry Pi to get started."
+                    : "Ask a house admin to connect a controller."
+                }
+                icon="cpu"
+              />
+            )}
+            {house.isAdmin && (
+              <Button
+                type={
+                  controllers.some((item) => item.paired) ? "outline" : "solid"
+                }
+                onPress={() => setIsConnecting(true)}
+              >
+                Connect a controller
+              </Button>
+            )}
+            <Button
+              loading={saving}
+              disabled={saving || controllersQuery.isLoading || !!queryError}
+              onPress={() => void openHouse()}
+              type={
+                controllers.some((item) => item.paired) ? "solid" : "outline"
+              }
+            >
+              Open house
+            </Button>
+          </>
+        ) : houses.length ? (
+          houses.map((item) => (
+            <ChoiceRow
+              key={item.id}
+              title={item.name}
+              icon="home"
+              detail={
+                hasSavedHouse && item.id === savedConfig?.house.id
+                  ? "Current house"
+                  : item.isAdmin
+                    ? "Admin"
+                    : "Member"
+              }
+              onPress={() => {
+                setHouseId(item.id);
+                setError("");
+              }}
+            />
+          ))
+        ) : (
+          !queryError && (
+            <>
+              <ChoiceRow
+                title="Add your first house"
+                detail="Create a house on the website, or ask its admin to add your email."
+                icon="home"
+              />
+              <Button onPress={() => void openDashboard()}>
+                Set up a house
+              </Button>
+            </>
+          )
+        )}
+      </View>
+      <View style={{ gap: 4 }}>
+        {(!house || house.isAdmin) && houses.length > 0 && (
+          <Button type="clear" onPress={() => void openDashboard()}>
+            {house ? "Manage controllers on website" : "Add or manage houses"}
+          </Button>
+        )}
+        <Button
+          type="clear"
+          loading={housesQuery.isRefetching || controllersQuery.isRefetching}
+          onPress={() => {
+            void housesQuery.refetch();
+            if (house) void controllersQuery.refetch();
+          }}
+        >
+          Refresh {house ? "controllers" : "houses"}
+        </Button>
+        {!house && (
+          <>
+            <Text
               style={{
-                minHeight: 52,
-                padding: 14,
-                flexDirection: "row",
-                alignItems: "center",
-                gap: 12,
-                borderRadius: 14,
-                borderWidth: 1,
-                borderColor:
-                  device?.name === item.name
-                    ? colors.success
-                    : colors.greyOutline,
+                textAlign: "center",
+                color: theme.colors.grey2,
+                fontSize: 13,
               }}
             >
-              <Feather
-                name={device?.name === item.name ? "check-circle" : "cpu"}
-                size={22}
-                color={colors.success}
-              />
-              <View style={{ flex: 1 }}>
-                <Text>{item.name}</Text>
-                <Text style={{ fontSize: 12, color: colors.grey2 }}>
-                  {item.service.txt.configured === "true"
-                    ? "Paired - paste a replacement key to reconnect"
-                    : "Ready for setup"}
-                </Text>
-              </View>
-            </TouchableOpacity>
-          ))}
-          <Text style={{ color: colors.grey2 }}>
-            3. Paste the API key for this Pi. It will be saved securely on the
-            controller.
-          </Text>
-          <InputField
-            label="Controller API key"
-            placeholder="cn_..."
-            value={apiKey}
-            onChangeText={setApiKey}
-            secureTextEntry
-            autoCapitalize="none"
-            disabled={pairing.isPending}
-          />
-          <Button
-            loading={pairing.isPending}
-            disabled={!device || !apiKey.trim() || saving}
-            onPress={() => void pairController()}
-          >
-            Connect controller
-          </Button>
-          <Text style={{ color: colors.grey2, fontSize: 12 }}>
-            Each Pi needs its own controller entry and key. You can also enter
-            the key with the setup script directly on the Pi.
-          </Text>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+              {user?.primaryEmailAddress?.emailAddress}
+            </Text>
+            <Button type="clear" onPress={() => void signOut()}>
+              Use another account
+            </Button>
+          </>
+        )}
+      </View>
+    </FlowScreen>
   );
 }

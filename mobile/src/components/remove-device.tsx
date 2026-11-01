@@ -1,3 +1,4 @@
+import SheetHeader from "./sheet-header";
 import Tile from "@/components/tile";
 import useRemoveDevice from "@/hooks/use-remove-device";
 import { ApiRoutes } from "@/routes/routes";
@@ -41,7 +42,7 @@ const RemoveDevice = () => {
         },
       },
     );
-  }, []);
+  }, [deviceId, queryClient, removeDevice, roomId]);
 
   return (
     <>
@@ -61,7 +62,7 @@ const RemoveDevice = () => {
       >
         <View
           style={{
-            height: 150,
+            minHeight: 150,
             padding: 20,
             borderTopLeftRadius: 16,
             borderTopRightRadius: 16,
@@ -69,7 +70,11 @@ const RemoveDevice = () => {
             gap: 12,
           }}
         >
-          <Text style={{ fontSize: 18 }}>Are you sure?</Text>
+          <SheetHeader
+            title="Remove device"
+            onClose={() => setIsConfirmationOpen(false)}
+            closeLabel="Close remove device confirmation"
+          />
           <Text>Do you really want to delete this device?</Text>
           <View
             style={{

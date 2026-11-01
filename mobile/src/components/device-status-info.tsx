@@ -43,7 +43,7 @@ const DeviceStatusInfo = ({
           justifyContent: "space-between",
         }}
       >
-        <Text style={{ fontSize: 16 }}>Status</Text>
+        <Text style={{ fontSize: 16 }}>Power</Text>
         <View
           style={{
             height: 45,
@@ -57,6 +57,7 @@ const DeviceStatusInfo = ({
           }}
         >
           <Switch
+            accessibilityLabel="Device power"
             value={device?.status ?? false}
             onChange={handleOnChange}
           />

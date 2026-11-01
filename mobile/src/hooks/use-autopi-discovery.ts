@@ -4,7 +4,7 @@ import { useZeroconf } from "react-native-zeroconf";
 export function useAutoPiDiscovery() {
   const permission = useLocalNetworkPermission({ serviceType: "autopihub" });
 
-  const { services, isScanning } = useZeroconf({
+  const { services, isScanning, error, restart } = useZeroconf({
     type: "autopihub",
     enabled: permission.data !== null && permission.data !== "denied",
   });
@@ -20,5 +20,7 @@ export function useAutoPiDiscovery() {
     devices,
     isScanning: permission.isLoading || isScanning,
     permissionDenied: permission.isDenied,
+    error: permission.error ?? error,
+    restart,
   };
 }

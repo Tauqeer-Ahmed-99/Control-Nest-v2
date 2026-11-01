@@ -26,6 +26,7 @@ class DeviceResponse(BaseModel):
 class SwitchDevice(BaseModel):
     deviceId: str
     status: bool
+    userId: str | None = None
 
 class RemoveMultipleDevices(BaseModel):
     deviceIds: list[str]

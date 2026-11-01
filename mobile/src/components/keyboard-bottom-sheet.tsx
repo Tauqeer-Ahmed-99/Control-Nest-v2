@@ -1,3 +1,6 @@
+import SheetHeader from "./sheet-header";
+import useAccessibilityPreferences from "@/hooks/use-accessibility-preferences";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useTheme } from "@rneui/themed";
 import React from "react";
 import {
@@ -12,6 +15,7 @@ import {
 
 type KeyboardBottomSheetProps = {
   children: React.ReactNode;
+  title: string;
   isVisible: boolean;
   accessibilityLabel: string;
   onClose: () => void;
@@ -19,17 +23,20 @@ type KeyboardBottomSheetProps = {
 
 const KeyboardBottomSheet = ({
   children,
+  title,
   isVisible,
   accessibilityLabel,
   onClose,
 }: KeyboardBottomSheetProps) => {
   const { theme } = useTheme();
+  const { reduceMotion } = useAccessibilityPreferences();
+  const insets = useSafeAreaInsets();
 
   return (
     <Modal
       visible={isVisible}
       transparent
-      animationType="slide"
+      animationType={reduceMotion ? "none" : "slide"}
       onRequestClose={onClose}
     >
       <View style={styles.container}>
@@ -50,9 +57,28 @@ const KeyboardBottomSheet = ({
             style={styles.scrollView}
             contentContainerStyle={styles.scrollContent}
             keyboardShouldPersistTaps="handled"
-            keyboardDismissMode={Platform.OS === "ios" ? "interactive" : "on-drag"}
+            keyboardDismissMode={
+              Platform.OS === "ios" ? "interactive" : "on-drag"
+            }
           >
-            {children}
+            <View
+              accessibilityViewIsModal
+              style={{
+                backgroundColor: theme.colors.secondary,
+                borderTopLeftRadius: 28,
+                borderTopRightRadius: 28,
+                paddingBottom: 8 + insets.bottom,
+              }}
+            >
+              <View style={{ paddingHorizontal: 20, paddingTop: 12 }}>
+                <SheetHeader
+                  title={title}
+                  onClose={onClose}
+                  closeLabel={accessibilityLabel}
+                />
+              </View>
+              {children}
+            </View>
           </ScrollView>
         </KeyboardAvoidingView>
       </View>

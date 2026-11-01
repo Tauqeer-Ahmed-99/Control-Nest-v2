@@ -1,3 +1,5 @@
+import useAccessibilityPreferences from "@/hooks/use-accessibility-preferences";
+import { useHouseId } from "@/hooks/use-house";
 import { getTypedRoute } from "@/routes/routes";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
@@ -9,9 +11,8 @@ import {
 } from "expo-glass-effect";
 import { Text, useTheme } from "@rneui/themed";
 import { router, usePathname } from "expo-router";
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
 import {
-  AccessibilityInfo,
   Platform,
   StyleSheet,
   TouchableOpacity,
@@ -22,12 +23,13 @@ import type { RefObject } from "react";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import AddDeviceForm from "./add-device-form";
 import AddRoomForm from "./add-room-form";
+import ChoiceRow from "./choice-row";
 import KeyboardBottomSheet from "./keyboard-bottom-sheet";
 
 const bottomNavItems = [
   { name: "home", label: "Home", path: "/home" },
   { name: "devices", label: "Devices", path: "/devices" },
-  { name: "create", label: "Create", path: "/create" },
+  { name: "create", label: "Add", path: "/create" },
   {
     name: "activity",
     label: "Activity",
@@ -42,36 +44,14 @@ const BottomNavigation = ({
   blurTarget: RefObject<View | null>;
 }) => {
   const { theme } = useTheme();
-  const { width: windowWidth } = useWindowDimensions();
+  const houseId = useHouseId();
+  const { width: windowWidth, fontScale } = useWindowDimensions();
   const insets = useSafeAreaInsets();
-  const [isAddRoomFormOpen, setIsAddRoomFormOpen] = useState(false);
-  const [isAddDeviceFormOpen, setIsAddDeviceFormOpen] = useState(false);
-  const [isReduceTransparencyEnabled, setIsReduceTransparencyEnabled] =
-    useState(true);
+  const [activeSheet, setActiveSheet] = useState<
+    "menu" | "room" | "device" | null
+  >(null);
+  const { reduceTransparency, highContrast } = useAccessibilityPreferences();
   const pathname = usePathname();
-
-  useEffect(() => {
-    if (Platform.OS !== "ios") return;
-
-    let isActive = true;
-    void AccessibilityInfo.isReduceTransparencyEnabled()
-      .then((isEnabled) => {
-        if (isActive) setIsReduceTransparencyEnabled(isEnabled);
-      })
-      .catch(() => {
-        if (isActive) setIsReduceTransparencyEnabled(true);
-      });
-
-    const subscription = AccessibilityInfo.addEventListener(
-      "reduceTransparencyChanged",
-      setIsReduceTransparencyEnabled,
-    );
-
-    return () => {
-      isActive = false;
-      subscription.remove();
-    };
-  }, []);
 
   const bottomNavIslandWidth = Math.min(windowWidth - 24, 520);
   const bottomOffset = Math.max(insets.bottom, 12);
@@ -79,9 +59,13 @@ const BottomNavigation = ({
     Platform.OS === "ios" &&
     isGlassEffectAPIAvailable() &&
     isLiquidGlassAvailable() &&
-    !isReduceTransparencyEnabled;
-  const useAndroidBlur = Platform.OS === "android";
-  const hasTranslucentMaterial = useNativeGlass || useAndroidBlur;
+    !reduceTransparency &&
+    !highContrast;
+  const useBlur =
+    !highContrast &&
+    ((Platform.OS === "ios" && !reduceTransparency && !useNativeGlass) ||
+      Platform.OS === "android");
+  const hasTranslucentMaterial = useNativeGlass || useBlur;
 
   const renderIcon = (
     name: (typeof bottomNavItems)[number]["name"],
@@ -116,11 +100,14 @@ const BottomNavigation = ({
           styles.bar,
           {
             bottom: bottomOffset,
+            minHeight: Math.max(76, 52 + 24 * fontScale),
             width: bottomNavIslandWidth,
             backgroundColor: hasTranslucentMaterial
               ? "transparent"
               : theme.colors.secondary,
-            borderColor: theme.colors.grey5,
+            borderColor: highContrast
+              ? theme.colors.grey2
+              : theme.colors.greyOutline,
           },
         ]}
       >
@@ -128,11 +115,12 @@ const BottomNavigation = ({
           <GlassView
             pointerEvents="none"
             glassEffectStyle="regular"
+            colorScheme={theme.mode === "dark" ? "dark" : "light"}
             isInteractive
             style={styles.materialLayer}
           />
         )}
-        {useAndroidBlur && (
+        {useBlur && (
           <BlurView
             pointerEvents="none"
             blurTarget={blurTarget}
@@ -166,20 +154,15 @@ const BottomNavigation = ({
                 isCurrent || isCreate
                   ? isCreate
                     ? () => {
-                        if (pathname === "/home") {
-                          setIsAddRoomFormOpen(true);
-                        } else if (
-                          pathname === "/devices" ||
-                          pathname.startsWith("/room") ||
-                          pathname === "/notifications"
-                        ) {
-                          setIsAddDeviceFormOpen(true);
-                        }
+                        setActiveSheet("menu");
                       }
                     : undefined
                   : () => router.replace(getTypedRoute(navItem.path))
               }
-              style={styles.item}
+              style={[
+                styles.item,
+                { minHeight: Math.max(68, 44 + 24 * fontScale) },
+              ]}
             >
               <View
                 style={[
@@ -200,7 +183,6 @@ const BottomNavigation = ({
                 {renderIcon(navItem.name, iconColor)}
               </View>
               <Text
-                numberOfLines={1}
                 style={[
                   styles.label,
                   {
@@ -218,18 +200,58 @@ const BottomNavigation = ({
         })}
       </View>
       <KeyboardBottomSheet
-        isVisible={isAddRoomFormOpen}
-        accessibilityLabel="Close add room form"
-        onClose={() => setIsAddRoomFormOpen(false)}
+        title={
+          activeSheet === "room"
+            ? "Add room"
+            : activeSheet === "device"
+              ? "Add device"
+              : "Add to your house"
+        }
+        isVisible={activeSheet !== null}
+        accessibilityLabel="Close add menu or form"
+        onClose={() => setActiveSheet(null)}
       >
-        <AddRoomForm closeForm={() => setIsAddRoomFormOpen(false)} />
-      </KeyboardBottomSheet>
-      <KeyboardBottomSheet
-        isVisible={isAddDeviceFormOpen}
-        accessibilityLabel="Close add device form"
-        onClose={() => setIsAddDeviceFormOpen(false)}
-      >
-        <AddDeviceForm closeForm={() => setIsAddDeviceFormOpen(false)} />
+        {activeSheet === "menu" ? (
+          <View
+            style={{
+              backgroundColor: theme.colors.secondary,
+              padding: 20,
+              gap: 16,
+            }}
+          >
+            <ChoiceRow
+              title="Room"
+              detail="Group devices by where they are."
+              icon="grid"
+              onPress={() => setActiveSheet("room")}
+            />
+            <ChoiceRow
+              title="Device"
+              detail="Connect a device to a room and controller."
+              icon="power"
+              onPress={() => setActiveSheet("device")}
+            />
+            <ChoiceRow
+              title="Controller"
+              detail="Connect another Raspberry Pi."
+              icon="cpu"
+              onPress={() => {
+                setActiveSheet(null);
+                router.push({
+                  pathname: "/house-login",
+                  params: { houseId: houseId ?? "" },
+                });
+              }}
+            />
+          </View>
+        ) : activeSheet === "room" ? (
+          <AddRoomForm closeForm={() => setActiveSheet(null)} />
+        ) : activeSheet === "device" ? (
+          <AddDeviceForm
+            closeForm={() => setActiveSheet(null)}
+            onAddRoom={() => setActiveSheet("room")}
+          />
+        ) : null}
       </KeyboardBottomSheet>
     </>
   );
@@ -240,7 +262,7 @@ const styles = StyleSheet.create({
     alignSelf: "center",
     position: "absolute",
     zIndex: 999,
-    height: 76,
+    minHeight: 76,
     paddingHorizontal: 6,
     borderWidth: 1,
     borderRadius: 999,
@@ -256,7 +278,8 @@ const styles = StyleSheet.create({
   item: {
     flex: 1,
     minWidth: 0,
-    height: 68,
+    minHeight: 68,
+    paddingVertical: 6,
     alignItems: "center",
     justifyContent: "center",
     gap: 4,

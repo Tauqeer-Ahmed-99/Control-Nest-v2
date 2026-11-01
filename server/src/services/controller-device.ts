@@ -305,7 +305,7 @@ export const removePhysicalDevice = async (
 
 export const switchPhysicalDevice = async (
   controllerUrl: string,
-  device: { deviceId: string; status: boolean },
+  device: { deviceId: string; status: boolean; userId: string },
   accessToken: string,
 ) => {
   const { success, message }: APIResponse = await measureRequestTiming(

@@ -1,3 +1,4 @@
+import { AccessibilityPreferencesProvider } from "@/providers/accessibility-provider";
 import { ClerkLoaded, ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { Lexend_100Thin } from "@expo-google-fonts/lexend/100Thin";
@@ -91,9 +92,7 @@ function AppLayout({ publishableKey }: { publishableKey: string }) {
       Text: (_props, currentTheme) => ({
         style: {
           color:
-            currentTheme.mode === "dark"
-              ? Colors.dark.text
-              : Colors.light.text,
+            currentTheme.mode === "dark" ? Colors.dark.text : Colors.light.text,
         },
       }),
       Button: (props, currentTheme) => {
@@ -122,12 +121,11 @@ function AppLayout({ publishableKey }: { publishableKey: string }) {
           titleStyle: {
             fontFamily: "Lexend_600SemiBold",
             fontSize: 15,
-            color:
-              isSolid
-                ? currentTheme.mode === "dark"
-                  ? "#10201A"
-                  : "#FFFFFF"
-                : buttonTint,
+            color: isSolid
+              ? currentTheme.mode === "dark"
+                ? "#10201A"
+                : "#FFFFFF"
+              : buttonTint,
           },
         };
       },
@@ -148,47 +146,49 @@ function AppLayout({ publishableKey }: { publishableKey: string }) {
 
   return (
     <ThemeProvider theme={theme}>
-      <ExpoStatusBar
-        style={colorScheme === "dark" ? "light" : "dark"}
-        animated
-        hidden={false}
-      />
-      <QueryClientProvider client={queryClient}>
-        <ClerkProvider
-          publishableKey={publishableKey}
-          tokenCache={tokenCache}
-        >
-          <SplashProvider isFontsLoaded={isFontsLoaded}>
-            <ClerkLoaded>
-              <AuthProvider>
-                <Stack>
-                  <Stack.Screen
-                    name="(tabs)"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="auth"
-                    options={{ headerShown: false }}
-                  />
-                  <Stack.Screen
-                    name="house-login"
-                    options={{
-                      title: "Houses & controllers",
-                      headerShown: true,
-                      headerTitleStyle: {
-                        color: palette.text,
-                      },
-                      headerStyle: {
-                        backgroundColor: palette.background,
-                      },
-                    }}
-                  />
-                </Stack>
-              </AuthProvider>
-            </ClerkLoaded>
-          </SplashProvider>
-        </ClerkProvider>
-      </QueryClientProvider>
+      <AccessibilityPreferencesProvider>
+        <ExpoStatusBar
+          style={colorScheme === "dark" ? "light" : "dark"}
+          animated
+          hidden={false}
+        />
+        <QueryClientProvider client={queryClient}>
+          <ClerkProvider
+            publishableKey={publishableKey}
+            tokenCache={tokenCache}
+          >
+            <SplashProvider isFontsLoaded={isFontsLoaded}>
+              <ClerkLoaded>
+                <AuthProvider>
+                  <Stack>
+                    <Stack.Screen
+                      name="(tabs)"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="auth"
+                      options={{ headerShown: false }}
+                    />
+                    <Stack.Screen
+                      name="house-login"
+                      options={{
+                        title: "Houses & controllers",
+                        headerShown: false,
+                        headerTitleStyle: {
+                          color: palette.text,
+                        },
+                        headerStyle: {
+                          backgroundColor: palette.background,
+                        },
+                      }}
+                    />
+                  </Stack>
+                </AuthProvider>
+              </ClerkLoaded>
+            </SplashProvider>
+          </ClerkProvider>
+        </QueryClientProvider>
+      </AccessibilityPreferencesProvider>
     </ThemeProvider>
   );
 }

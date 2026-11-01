@@ -1,692 +1,11 @@
-// import tryCatch from "@/utils/try-catch";
-// import { useSignIn } from "@clerk/expo";
-// import Feather from "@expo/vector-icons/Feather";
-// import { Button, Text, useTheme } from "@rneui/themed";
-// import { Href, useRouter } from "expo-router";
-// import { useCallback, useState } from "react";
-// import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-// import InputField from "./input-field";
-
-// const SignIn = ({
-//   nextStep,
-//   prevStep,
-// }: {
-//   nextStep: () => void;
-//   prevStep: () => void;
-// }) => {
-//   const {
-//     theme: {
-//       colors: { grey3 },
-//     },
-//   } = useTheme();
-//   const styles = useStyles();
-//   const { signIn } = useSignIn();
-//   const [emailAddress, setEmailAddress] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [isLoading, setIsLoading] = useState(false);
-//   const [error, setError] = useState("");
-//   const router = useRouter();
-
-//   const onSignInPress = useCallback(async () => {
-//     setIsLoading(true);
-
-//     const { data, error } = await tryCatch(
-//       signIn.password({ emailAddress, password }),
-//     );
-
-//     if (error) {
-//       setError(error.message);
-//       setIsLoading(false);
-//       return;
-//     }
-
-//     if (data.error) {
-//       setError(data.error.message);
-//       setIsLoading(false);
-//       return;
-//     }
-
-//     if (signIn.status === "complete") {
-//       await tryCatch(
-//         signIn.finalize({
-//           navigate: ({ session, decorateUrl }) => {
-//             if (session.currentTask) return;
-//             router.replace(decorateUrl("/house-login") as Href);
-//           },
-//         }),
-//       );
-//     }
-
-//     setIsLoading(false);
-//   }, [emailAddress, password, signIn]);
-
-//   const onForgotPasswordPress = useCallback(() => {}, []);
-
-//   const onSendCodePress = useCallback(() => {}, []);
-
-//   return (
-//     <ScrollView style={{ width: "100%" }}>
-//       <View style={{ width: "100%", padding: 32, justifyContent: "center" }}>
-//         <View style={styles.header}>
-//           <Text
-//             style={{
-//               fontFamily: "Lexend_600SemiBold",
-//               fontSize: 24,
-//             }}
-//           >
-//             Sign In
-//           </Text>
-//           <TouchableOpacity disabled={isLoading} onPress={prevStep}>
-//             <Feather name="arrow-left" size={24} color={grey3} />
-//           </TouchableOpacity>
-//         </View>
-//         <InputField
-//           value={emailAddress}
-//           placeholder="Enter Email..."
-//           onChangeText={(emailAddress) => setEmailAddress(emailAddress)}
-//           disabled={isLoading}
-//         />
-//         <InputField
-//           value={password}
-//           placeholder="Enter Password..."
-//           secureTextEntry={true}
-//           onChangeText={(password) => setPassword(password)}
-//           disabled={isLoading}
-//         />
-//         <Button
-//           title="Sign In"
-//           loading={isLoading}
-//           buttonStyle={styles.button}
-//           containerStyle={styles.buttonContainer}
-//           titleStyle={styles.buttonTitle}
-//           onPress={!isLoading ? onSignInPress : undefined}
-//         />
-//         {error && (
-//           <Text style={{ textAlign: "center", color: "red", marginTop: 16 }}>
-//             {error}
-//           </Text>
-//         )}
-
-//         <Button
-//           buttonStyle={styles.secondaryButton}
-//           containerStyle={styles.buttonContainer}
-//           titleStyle={styles.secondaryButtonTitle}
-//           onPress={!isLoading ? onForgotPasswordPress : undefined}
-//         >
-//           Forgot Password?
-//         </Button>
-
-//         <Button
-//           buttonStyle={styles.secondaryButton}
-//           containerStyle={styles.buttonContainer}
-//           titleStyle={styles.secondaryButtonTitle}
-//           onPress={!isLoading ? nextStep : undefined}
-//         >
-//           Don't have an account? Signup Instead.
-//         </Button>
-//       </View>
-//     </ScrollView>
-//   );
-// };
-
-// export default SignIn;
-
-// const useStyles = () => {
-//   return StyleSheet.create({
-//     header: {
-//       flexDirection: "row",
-//       justifyContent: "space-between",
-//       alignItems: "center",
-//       marginBottom: 24,
-//     },
-//     button: {
-//       width: 240,
-//       borderRadius: 25,
-//       backgroundColor: "#3e31ab",
-//     },
-//     secondaryButton: {
-//       marginTop: 16,
-//       width: 240,
-//       borderRadius: 25,
-//       backgroundColor: "transparent",
-//     },
-//     buttonContainer: {
-//       elevation: 20,
-//       borderRadius: 25,
-//       shadowColor: "#3e31ab",
-//       alignItems: "center",
-//     },
-//     buttonTitle: { fontFamily: "Lexend_400Regular" },
-//     secondaryButtonTitle: { fontFamily: "Lexend_400Regular", fontSize: 12 },
-//   });
-// };
-
-// import tryCatch from "@/utils/try-catch";
-// import { useSignIn } from "@clerk/expo";
-// import Feather from "@expo/vector-icons/Feather";
-// import { Button, Text, useTheme } from "@rneui/themed";
-// import { Href, useRouter } from "expo-router";
-// import { useCallback, useState } from "react";
-// import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
-// import InputField from "./input-field";
-
-// type AuthStep = "sign-in" | "forgot-password" | "verify-code" | "new-password";
-
-// const SignIn = ({
-//   nextStep,
-//   prevStep,
-// }: {
-//   nextStep: () => void;
-//   prevStep: () => void;
-// }) => {
-//   const {
-//     theme: {
-//       colors: { grey3 },
-//     },
-//   } = useTheme();
-
-//   const styles = useStyles();
-//   const { signIn } = useSignIn();
-//   const router = useRouter();
-
-//   const [step, setStep] = useState<AuthStep>("sign-in");
-//   const [emailAddress, setEmailAddress] = useState("");
-//   const [password, setPassword] = useState("");
-//   const [code, setCode] = useState("");
-//   const [newPassword, setNewPassword] = useState("");
-
-//   const [isLoading, setIsLoading] = useState(false);
-//   const [error, setError] = useState("");
-//   const [message, setMessage] = useState("");
-
-//   const clearFeedback = useCallback(() => {
-//     setError("");
-//     setMessage("");
-//   }, []);
-
-//   const handleError = useCallback((value: unknown) => {
-//     if (value instanceof Error) {
-//       setError(value.message);
-//       return;
-//     }
-
-//     setError("Something went wrong. Please try again.");
-//   }, []);
-
-//   const onSignInPress = useCallback(async () => {
-//     clearFeedback();
-//     setIsLoading(true);
-
-//     try {
-//       const { data, error: requestError } = await tryCatch(
-//         signIn.password({
-//           emailAddress: emailAddress.trim(),
-//           password,
-//         }),
-//       );
-
-//       if (requestError) {
-//         setError(requestError.message);
-//         return;
-//       }
-
-//       if (data.error) {
-//         setError(data.error.message);
-//         return;
-//       }
-
-//       if (signIn.status === "complete") {
-//         const { error: finalizeError } = await tryCatch(
-//           signIn.finalize({
-//             navigate: ({ session, decorateUrl }) => {
-//               if (session.currentTask) return;
-
-//               router.replace(decorateUrl("/house-login") as Href);
-//             },
-//           }),
-//         );
-
-//         if (finalizeError) {
-//           setError(finalizeError.message);
-//         }
-//       } else if (signIn.status === "needs_second_factor") {
-//         setError("Additional authentication is required.");
-//       } else {
-//         setError("Sign-in requires an additional authentication step.");
-//       }
-//     } catch (err) {
-//       handleError(err);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   }, [clearFeedback, emailAddress, handleError, password, router, signIn]);
-
-//   const onForgotPasswordPress = useCallback(() => {
-//     clearFeedback();
-//     setCode("");
-//     setNewPassword("");
-//     setStep("forgot-password");
-//   }, [clearFeedback]);
-
-//   const onSendCodePress = useCallback(async () => {
-//     clearFeedback();
-
-//     const email = emailAddress.trim();
-
-//     if (!email) {
-//       setError("Please enter your email address.");
-//       return;
-//     }
-
-//     setIsLoading(true);
-
-//     try {
-//       const { data, error: requestError } = await tryCatch(
-//         signIn.create({ identifier: email }),
-//       );
-
-//       if (requestError) {
-//         setError(requestError.message);
-//         return;
-//       }
-
-//       if (data.error) {
-//         setError(data.error.message);
-//         return;
-//       }
-
-//       const { data: sendData, error: sendRequestError } = await tryCatch(
-//         signIn.resetPasswordEmailCode.sendCode(),
-//       );
-
-//       if (sendRequestError) {
-//         setError(sendRequestError.message);
-//         return;
-//       }
-
-//       if (sendData.error) {
-//         setError(sendData.error.message);
-//         return;
-//       }
-
-//       setMessage(`A verification code has been sent to ${email}.`);
-//       setStep("verify-code");
-//     } catch (err) {
-//       handleError(err);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   }, [clearFeedback, emailAddress, handleError, signIn]);
-
-//   const onVerifyCodePress = useCallback(async () => {
-//     clearFeedback();
-
-//     if (!code.trim()) {
-//       setError("Please enter the verification code.");
-//       return;
-//     }
-
-//     setIsLoading(true);
-
-//     try {
-//       const { data, error: requestError } = await tryCatch(
-//         signIn.resetPasswordEmailCode.verifyCode({
-//           code: code.trim(),
-//         }),
-//       );
-
-//       if (requestError) {
-//         setError(requestError.message);
-//         return;
-//       }
-
-//       if (data.error) {
-//         setError(data.error.message);
-//         return;
-//       }
-
-//       if (signIn.status === "needs_new_password") {
-//         setStep("new-password");
-//         setMessage("Code verified. Enter your new password.");
-//       } else if (signIn.status === "complete") {
-//         await finalizeAuthentication();
-//       } else {
-//         setError("The verification flow requires another step.");
-//       }
-//     } catch (err) {
-//       handleError(err);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   }, [clearFeedback, code, handleError, signIn]);
-
-//   const finalizeAuthentication = async () => {
-//     const { error: finalizeError } = await tryCatch(
-//       signIn.finalize({
-//         navigate: ({ session, decorateUrl }) => {
-//           if (session.currentTask) return;
-
-//           router.replace(decorateUrl("/house-login") as Href);
-//         },
-//       }),
-//     );
-
-//     if (finalizeError) {
-//       setError(finalizeError.message);
-//     }
-//   };
-
-//   const onResetPasswordPress = useCallback(async () => {
-//     clearFeedback();
-
-//     if (!newPassword) {
-//       setError("Please enter your new password.");
-//       return;
-//     }
-
-//     setIsLoading(true);
-
-//     try {
-//       const { data, error: requestError } = await tryCatch(
-//         signIn.resetPasswordEmailCode.submitPassword({
-//           password: newPassword,
-//           signOutOfOtherSessions: true,
-//         }),
-//       );
-
-//       if (requestError) {
-//         setError(requestError.message);
-//         return;
-//       }
-
-//       if (data.error) {
-//         setError(data.error.message);
-//         return;
-//       }
-
-//       if (signIn.status === "complete") {
-//         await finalizeAuthentication();
-//       } else if (signIn.status === "needs_second_factor") {
-//         setError("Additional authentication is required.");
-//       } else {
-//         setError("Your password was submitted, but sign-in is not complete.");
-//       }
-//     } catch (err) {
-//       handleError(err);
-//     } finally {
-//       setIsLoading(false);
-//     }
-//   }, [clearFeedback, handleError, newPassword, signIn]);
-
-//   const onBackPress = useCallback(() => {
-//     clearFeedback();
-
-//     if (step === "new-password") {
-//       setStep("verify-code");
-//       return;
-//     }
-
-//     if (step === "verify-code") {
-//       setStep("forgot-password");
-//       return;
-//     }
-
-//     if (step === "forgot-password") {
-//       setStep("sign-in");
-//       return;
-//     }
-
-//     prevStep();
-//   }, [clearFeedback, prevStep, step]);
-
-//   const renderButton = (
-//     title: string,
-//     onPress: () => void,
-//     disabled = false,
-//   ) => (
-//     <Button
-//       title={title}
-//       loading={isLoading}
-//       disabled={disabled || isLoading}
-//       buttonStyle={styles.button}
-//       containerStyle={styles.buttonContainer}
-//       titleStyle={styles.buttonTitle}
-//       onPress={onPress}
-//     />
-//   );
-
-//   const renderSecondaryButton = (title: string, onPress: () => void) => (
-//     <Button
-//       title={title}
-//       disabled={isLoading}
-//       buttonStyle={styles.secondaryButton}
-//       containerStyle={styles.buttonContainer}
-//       titleStyle={styles.secondaryButtonTitle}
-//       onPress={onPress}
-//     />
-//   );
-
-//   const renderFeedback = () => (
-//     <>
-//       {!!message && <Text style={styles.successMessage}>{message}</Text>}
-
-//       {!!error && (
-//         <Text accessibilityRole="alert" style={styles.errorMessage}>
-//           {error}
-//         </Text>
-//       )}
-//     </>
-//   );
-
-//   return (
-//     <ScrollView style={{ width: "100%" }} keyboardShouldPersistTaps="handled">
-//       <View style={{ width: "100%", padding: 32, justifyContent: "center" }}>
-//         <View style={styles.header}>
-//           <Text style={styles.heading}>
-//             {step === "sign-in"
-//               ? "Sign In"
-//               : step === "forgot-password"
-//                 ? "Forgot Password?"
-//                 : step === "verify-code"
-//                   ? "Verify Code"
-//                   : "Reset Password"}
-//           </Text>
-
-//           <TouchableOpacity disabled={isLoading} onPress={onBackPress}>
-//             <Feather name="arrow-left" size={24} color={grey3} />
-//           </TouchableOpacity>
-//         </View>
-
-//         {step === "sign-in" && (
-//           <>
-//             <InputField
-//               value={emailAddress}
-//               placeholder="Enter Email..."
-//               onChangeText={(value) => {
-//                 setEmailAddress(value);
-//                 clearFeedback();
-//               }}
-//               disabled={isLoading}
-//             />
-
-//             <InputField
-//               value={password}
-//               placeholder="Enter Password..."
-//               secureTextEntry
-//               onChangeText={(value) => {
-//                 setPassword(value);
-//                 clearFeedback();
-//               }}
-//               disabled={isLoading}
-//             />
-
-//             {renderButton("Sign In", onSignInPress)}
-
-//             {renderFeedback()}
-
-//             {renderSecondaryButton("Forgot Password?", onForgotPasswordPress)}
-
-//             {renderSecondaryButton(
-//               "Don't have an account? Signup Instead.",
-//               nextStep,
-//             )}
-//           </>
-//         )}
-
-//         {step === "forgot-password" && (
-//           <>
-//             <Text style={styles.description}>
-//               Enter your email address and we'll send you a password reset code.
-//             </Text>
-
-//             <InputField
-//               value={emailAddress}
-//               placeholder="Enter Email..."
-//               onChangeText={(value) => {
-//                 setEmailAddress(value);
-//                 clearFeedback();
-//               }}
-//               disabled={isLoading}
-//             />
-
-//             {renderButton(
-//               "Send Reset Code",
-//               onSendCodePress,
-//               !emailAddress.trim(),
-//             )}
-
-//             {renderFeedback()}
-
-//             {renderSecondaryButton("Back to Sign In", () => setStep("sign-in"))}
-//           </>
-//         )}
-
-//         {step === "verify-code" && (
-//           <>
-//             <Text style={styles.description}>
-//               Enter the verification code sent to your email address.
-//             </Text>
-
-//             <InputField
-//               value={code}
-//               placeholder="Enter Verification Code..."
-//               onChangeText={(value) => {
-//                 setCode(value);
-//                 clearFeedback();
-//               }}
-//               disabled={isLoading}
-//             />
-
-//             {renderButton("Verify Code", onVerifyCodePress, !code.trim())}
-
-//             {renderFeedback()}
-
-//             {renderSecondaryButton("Resend Code", onSendCodePress)}
-
-//             {renderSecondaryButton("Change Email", () => {
-//               clearFeedback();
-//               setStep("forgot-password");
-//             })}
-//           </>
-//         )}
-
-//         {step === "new-password" && (
-//           <>
-//             <Text style={styles.description}>
-//               Enter a new password for your account.
-//             </Text>
-
-//             <InputField
-//               value={newPassword}
-//               placeholder="Enter New Password..."
-//               secureTextEntry
-//               onChangeText={(value) => {
-//                 setNewPassword(value);
-//                 clearFeedback();
-//               }}
-//               disabled={isLoading}
-//             />
-
-//             {renderButton("Reset Password", onResetPasswordPress, !newPassword)}
-
-//             {renderFeedback()}
-
-//             {renderSecondaryButton("Back to Verification", () => {
-//               clearFeedback();
-//               setStep("verify-code");
-//             })}
-//           </>
-//         )}
-//       </View>
-//     </ScrollView>
-//   );
-// };
-
-// export default SignIn;
-
-// const useStyles = () => {
-//   return StyleSheet.create({
-//     header: {
-//       flexDirection: "row",
-//       justifyContent: "space-between",
-//       alignItems: "center",
-//       marginBottom: 24,
-//     },
-//     heading: {
-//       fontFamily: "Lexend_600SemiBold",
-//       fontSize: 24,
-//     },
-//     description: {
-//       fontFamily: "Lexend_400Regular",
-//       fontSize: 14,
-//       marginBottom: 16,
-//     },
-//     button: {
-//       width: 240,
-//       borderRadius: 25,
-//       backgroundColor: "#3e31ab",
-//     },
-//     secondaryButton: {
-//       marginTop: 16,
-//       width: 240,
-//       borderRadius: 25,
-//       backgroundColor: "transparent",
-//     },
-//     buttonContainer: {
-//       elevation: 20,
-//       borderRadius: 25,
-//       shadowColor: "#3e31ab",
-//       alignItems: "center",
-//     },
-//     buttonTitle: {
-//       fontFamily: "Lexend_400Regular",
-//     },
-//     secondaryButtonTitle: {
-//       fontFamily: "Lexend_400Regular",
-//       fontSize: 12,
-//     },
-//     errorMessage: {
-//       textAlign: "center",
-//       color: "red",
-//       marginTop: 16,
-//       fontFamily: "Lexend_400Regular",
-//     },
-//     successMessage: {
-//       textAlign: "center",
-//       color: "green",
-//       marginTop: 16,
-//       fontFamily: "Lexend_400Regular",
-//     },
-//   });
-// };
-
+import useFlowBack from "@/hooks/use-flow-back";
 import tryCatch from "@/utils/try-catch";
 import { useSignIn } from "@clerk/expo";
 import Feather from "@expo/vector-icons/Feather";
 import { Button, Text, useTheme } from "@rneui/themed";
 import { Href, useRouter } from "expo-router";
 import { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { StyleSheet, TouchableOpacity, View } from "react-native";
 import InputField from "./input-field";
 
 type AuthStep =
@@ -698,15 +17,8 @@ type AuthStep =
 
 type MfaStrategy = "email_code" | "totp" | "backup_code";
 
-const SignIn = ({
-  nextStep,
-  prevStep,
-}: {
-  nextStep: () => void;
-  prevStep: () => void;
-}) => {
+const SignIn = ({ nextStep }: { nextStep: () => void }) => {
   const { theme } = useTheme();
-  const { grey3 } = theme.colors;
 
   const styles = useStyles();
   const { signIn } = useSignIn();
@@ -718,6 +30,7 @@ const SignIn = ({
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [code, setCode] = useState("");
   const [newPassword, setNewPassword] = useState("");
+  const [showOtherMethods, setShowOtherMethods] = useState(false);
   const [mfaStrategy, setMfaStrategy] = useState<MfaStrategy>("totp");
 
   const [isLoading, setIsLoading] = useState(false);
@@ -846,21 +159,19 @@ const SignIn = ({
 
       if (signIn.status === "needs_new_password") {
         setError(
-          "Clerk requires a password update for this sign-in. Use Forgot Password to reset your password, then sign in again.",
+          "Reset your password to continue. Choose Forgot Password below.",
         );
         return;
       }
 
       if (signIn.status === "needs_protect_check") {
         setError(
-          "An additional security check is required. This component needs a Protect challenge handler to complete it.",
+          "An extra security check is needed. Complete sign-in on the website, then try again here.",
         );
         return;
       }
 
-      setError(
-        `Sign-in is not complete. Current authentication status: ${signIn.status}.`,
-      );
+      setError("Sign-in couldn't finish. Try again.");
     } catch (err) {
       handleError(err);
     } finally {
@@ -997,7 +308,7 @@ const SignIn = ({
         await finalizeAuthentication();
       } else {
         setError(
-          `Password reset is not ready for the next step. Current status: ${signIn.status}.`,
+          "Couldn't verify this code. Request a new code and try again.",
         );
       }
     } catch (err) {
@@ -1043,9 +354,7 @@ const SignIn = ({
       ) {
         await startAdditionalAuthentication();
       } else {
-        setError(
-          `Your password was submitted, but authentication is not complete. Current status: ${signIn.status}.`,
-        );
+        setError("Your password was updated. Return to Sign In to continue.");
       }
     } catch (err) {
       handleError(err);
@@ -1121,9 +430,7 @@ const SignIn = ({
       if (signIn.status === "complete") {
         await finalizeAuthentication();
       } else {
-        setError(
-          `Verification was accepted, but authentication is not complete. Current status: ${signIn.status}.`,
-        );
+        setError("Couldn't finish verification. Try signing in again.");
       }
     } catch (err) {
       handleError(err);
@@ -1193,8 +500,10 @@ const SignIn = ({
       return;
     }
 
-    prevStep();
-  }, [clearFeedback, prevStep, step]);
+    setStep("sign-in");
+  }, [clearFeedback, step]);
+
+  useFlowBack(step === "sign-in" ? undefined : onBackPress, isLoading);
 
   const renderButton = (
     title: string,
@@ -1226,7 +535,11 @@ const SignIn = ({
 
   const renderFeedback = () => (
     <>
-      {!!message && <Text style={styles.successMessage}>{message}</Text>}
+      {!!message && (
+        <Text accessibilityLiveRegion="polite" style={styles.successMessage}>
+          {message}
+        </Text>
+      )}
       {!!error && (
         <Text accessibilityRole="alert" style={styles.errorMessage}>
           {error}
@@ -1241,13 +554,25 @@ const SignIn = ({
     availableFactors.some((factor) => factor.strategy === strategy);
 
   return (
-    <ScrollView
-      style={{ width: "100%", flexShrink: 1 }}
-      contentContainerStyle={{ flexGrow: 1 }}
-      keyboardShouldPersistTaps="handled"
-    >
+    <View>
       <View style={styles.form}>
         <View style={styles.header}>
+          {step !== "sign-in" && (
+            <TouchableOpacity
+              disabled={isLoading}
+              onPress={onBackPress}
+              accessibilityRole="button"
+              accessibilityLabel="Back to previous sign-in step"
+              style={{
+                minWidth: 48,
+                minHeight: 48,
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Feather name="arrow-left" size={24} color={theme.colors.black} />
+            </TouchableOpacity>
+          )}
           <Text style={styles.heading}>
             {step === "sign-in"
               ? "Sign In"
@@ -1259,17 +584,18 @@ const SignIn = ({
                     ? "Reset Password"
                     : "Additional Verification"}
           </Text>
-
-          <TouchableOpacity disabled={isLoading} onPress={onBackPress}>
-            <Feather name="arrow-left" size={24} color={grey3} />
-          </TouchableOpacity>
         </View>
 
         {step === "sign-in" && (
           <>
+            <Text style={[styles.description, { color: theme.colors.grey2 }]}>
+              Sign in to see your houses.
+            </Text>
             <InputField
               containerStyle={styles.inputField}
-              label="Email address *"
+              label="Email address"
+              autoComplete="email"
+              autoCorrect={false}
               value={emailAddress}
               placeholder="you@example.com"
               autoCapitalize="none"
@@ -1283,7 +609,8 @@ const SignIn = ({
 
             <InputField
               containerStyle={styles.inputField}
-              label="Password *"
+              label="Password"
+              autoComplete="current-password"
               value={password}
               placeholder="Enter password"
               autoCapitalize="none"
@@ -1328,10 +655,7 @@ const SignIn = ({
 
             {renderSecondaryButton("Forgot Password?", onForgotPasswordPress)}
 
-            {renderSecondaryButton(
-              "Don't have an account? Signup Instead.",
-              nextStep,
-            )}
+            {renderSecondaryButton("Create an account", nextStep)}
           </>
         )}
 
@@ -1345,6 +669,8 @@ const SignIn = ({
             <InputField
               containerStyle={styles.inputField}
               label="Email address"
+              autoComplete="email"
+              autoCorrect={false}
               value={emailAddress}
               placeholder="you@example.com"
               autoCapitalize="none"
@@ -1380,6 +706,8 @@ const SignIn = ({
             <InputField
               containerStyle={styles.inputField}
               label="Verification code"
+              autoComplete="one-time-code"
+              keyboardType="number-pad"
               value={code}
               placeholder="Enter code"
               onChangeText={(value) => {
@@ -1411,6 +739,7 @@ const SignIn = ({
             <InputField
               containerStyle={styles.inputField}
               label="New password"
+              autoComplete="new-password"
               value={newPassword}
               placeholder="Enter new password"
               autoCapitalize="none"
@@ -1474,6 +803,14 @@ const SignIn = ({
                   : "Verification code"
               }
               value={code}
+              autoComplete={
+                mfaStrategy === "backup_code" ? "off" : "one-time-code"
+              }
+              keyboardType={
+                mfaStrategy === "backup_code" ? "default" : "number-pad"
+              }
+              autoCapitalize="none"
+              autoCorrect={false}
               placeholder={
                 mfaStrategy === "backup_code"
                   ? "Enter backup code"
@@ -1500,60 +837,69 @@ const SignIn = ({
                 onResendMfaEmailCodePress,
               )}
 
-            {supportsFactor("email_code") &&
-              mfaStrategy !== "email_code" &&
-              renderSecondaryButton("Use Email Code", async () => {
-                clearFeedback();
-                setIsLoading(true);
+            {availableFactors.length > 1 &&
+              renderSecondaryButton(
+                showOtherMethods ? "Hide other methods" : "Try another method",
+                () => setShowOtherMethods((value) => !value),
+              )}
+            {showOtherMethods && (
+              <>
+                {supportsFactor("email_code") &&
+                  mfaStrategy !== "email_code" &&
+                  renderSecondaryButton("Use Email Code", async () => {
+                    clearFeedback();
+                    setIsLoading(true);
 
-                try {
-                  const { data, error: requestError } = await tryCatch(
-                    signIn.mfa.sendEmailCode(),
-                  );
+                    try {
+                      const { data, error: requestError } = await tryCatch(
+                        signIn.mfa.sendEmailCode(),
+                      );
 
-                  if (requestError) {
-                    setError(requestError.message);
-                    return;
-                  }
+                      if (requestError) {
+                        setError(requestError.message);
+                        return;
+                      }
 
-                  if (data.error) {
-                    setError(data.error.message);
-                    return;
-                  }
+                      if (data.error) {
+                        setError(data.error.message);
+                        return;
+                      }
 
-                  setMfaStrategy("email_code");
-                  setCode("");
-                  setMessage(
-                    `A verification code has been sent to ${emailAddress.trim()}.`,
-                  );
-                } catch (err) {
-                  handleError(err);
-                } finally {
-                  setIsLoading(false);
-                }
-              })}
+                      setMfaStrategy("email_code");
+                      setCode("");
+                      setMessage(
+                        `A verification code has been sent to ${emailAddress.trim()}.`,
+                      );
+                    } catch (err) {
+                      handleError(err);
+                    } finally {
+                      setIsLoading(false);
+                    }
+                  })}
 
-            {supportsFactor("totp") &&
-              mfaStrategy !== "totp" &&
-              renderSecondaryButton("Use Authenticator App", () => {
-                clearFeedback();
-                setMfaStrategy("totp");
-                setCode("");
-                setMessage("Enter the code from your authenticator app.");
-              })}
+                {supportsFactor("totp") &&
+                  mfaStrategy !== "totp" &&
+                  renderSecondaryButton("Use Authenticator App", () => {
+                    clearFeedback();
+                    setMfaStrategy("totp");
+                    setCode("");
+                    setMessage("Enter the code from your authenticator app.");
+                  })}
 
-            {supportsFactor("backup_code") &&
-              mfaStrategy !== "backup_code" &&
-              renderSecondaryButton("Use Backup Code", () => {
-                clearFeedback();
-                setMfaStrategy("backup_code");
-                setCode("");
-                setMessage("Enter one of your unused backup codes.");
-              })}
+                {supportsFactor("backup_code") &&
+                  mfaStrategy !== "backup_code" &&
+                  renderSecondaryButton("Use Backup Code", () => {
+                    clearFeedback();
+                    setMfaStrategy("backup_code");
+                    setCode("");
+                    setMessage("Enter one of your unused backup codes.");
+                  })}
+              </>
+            )}
           </>
         )}
       </View>
-    </ScrollView>
+    </View>
   );
 };
 
@@ -1565,8 +911,8 @@ const useStyles = () => {
   return StyleSheet.create({
     form: {
       width: "100%",
-      paddingHorizontal: 24,
-      paddingTop: 24,
+      paddingHorizontal: 0,
+      paddingTop: 0,
       paddingBottom: 24,
     },
     header: {
@@ -1581,28 +927,31 @@ const useStyles = () => {
     },
     heading: {
       fontFamily: "Lexend_600SemiBold",
-      fontSize: 24,
+      fontSize: 28,
+      flex: 1,
     },
     description: {
       fontFamily: "Lexend_400Regular",
-      fontSize: 14,
-      marginBottom: 16,
+      fontSize: 16,
+      lineHeight: 24,
+      color: theme.colors.grey2,
+      marginBottom: 20,
     },
     button: {
-      width: 240,
-      borderRadius: 25,
+      width: "100%",
+      borderRadius: 14,
       marginTop: 4,
       backgroundColor: theme.colors.success,
     },
     secondaryButton: {
-      marginTop: 16,
-      width: 240,
-      borderRadius: 25,
+      marginTop: 4,
+      width: "100%",
+      borderRadius: 14,
       backgroundColor: "transparent",
     },
     buttonContainer: {
-      borderRadius: 25,
-      alignItems: "center",
+      borderRadius: 14,
+      width: "100%",
     },
     buttonTitle: {
       fontFamily: "Lexend_600SemiBold",

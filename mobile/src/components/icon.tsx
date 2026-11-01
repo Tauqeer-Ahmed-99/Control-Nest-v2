@@ -1,9 +1,7 @@
 import useIcon from "@/hooks/use-icons";
-import { useTheme } from "@rneui/themed";
 import { View } from "react-native";
 
 const Icon = ({ name }: { name: string }) => {
-  const { theme } = useTheme();
   const { icon, color } = useIcon(name);
   return (
     <View

@@ -21,11 +21,13 @@ export const createLog = async ({
   statusFrom,
   statusTo,
   controllerDeviceId,
+  userId,
 }: {
   deviceId: string;
   statusFrom: boolean;
   statusTo: boolean;
   controllerDeviceId: string;
+  userId?: string | null;
 }) => {
   const { data: device, error } = await tryCatch(
     database.query.devices.findFirst({
@@ -40,14 +42,19 @@ export const createLog = async ({
       statusCode: 403,
     });
 
-  await measureRequestTiming("db-control-log-insert", () =>
-    database.insert(deviceControlLogs).values({
-      deviceId,
-      statusChangedFrom: statusFrom,
-      statusChangedTo: statusTo,
-      createdBy: `CD-${controllerDeviceId}`,
-    }),
+  const { error: insertError } = await tryCatch(
+    measureRequestTiming("db-control-log-insert", () =>
+      database.insert(deviceControlLogs).values({
+        deviceId,
+        statusChangedFrom: statusFrom,
+        statusChangedTo: statusTo,
+        // Older controllers and system actions may not have an initiating user.
+        createdBy: userId ?? `CD-${controllerDeviceId}`,
+      }),
+    ),
   );
+  if (insertError)
+    throw new APIError({ message: "Unable to create device control log." });
 };
 
 interface GetDeviceControlLogsParams {
@@ -398,9 +405,10 @@ export const getEnergyConsumption = async ({
       endExclusive: true,
     },
     unit,
-    totalConsumption: unit === "kWh" ? totalWh / 1000 : totalWh,
-    totalWh,
-    totalKwh: totalWh / 1000,
+    totalConsumption:
+      unit === "kWh" ? (totalWh / 1000).toPrecision(2) : totalWh.toPrecision(2),
+    totalWh: totalWh.toPrecision(2),
+    totalKwh: (totalWh / 1000).toPrecision(2),
     devices,
   };
 };

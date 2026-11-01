@@ -116,13 +116,20 @@ const SummaryCard = ({
   summaryItem: ISummaryItem;
   calculateEnergyConsumption?: () => void;
 }) => {
-  const { width } = useWindowDimensions();
-  const cardWidth = (width - 36 - SUMMARY_GAP * 2) / 3;
+  const { width, fontScale } = useWindowDimensions();
+  const cardWidth =
+    fontScale > 1.3 || width < 360
+      ? width - 36
+      : (width - 36 - SUMMARY_GAP * 2) / 3;
 
   return (
     <BorderContainer
       borderWidth={1}
-      style={{ height: 136, width: cardWidth, borderRadius: 18 }}
+      style={{
+        height: 136 * Math.max(1, fontScale),
+        width: cardWidth,
+        borderRadius: 18,
+      }}
     >
       <SummaryView
         summaryItem={summaryItem}
@@ -211,10 +218,10 @@ const Summary = () => {
         "Try Again"
       ) : isEnergyConsumptionFetching ? (
         <ActivityIndicator color={theme.colors.success} />
+      ) : energyConsumption ? (
+        `${energyConsumption.totalConsumption} ${energyConsumption.unit}`
       ) : (
-        energyConsumption
-          ? `${energyConsumption.totalConsumption} ${energyConsumption.unit}`
-          : "Calculate Now"
+        "Calculate Now"
       ),
       secondaryText: isEnergyConsumptionFetching
         ? "Updating monthly usage"
@@ -231,6 +238,7 @@ const Summary = () => {
     <View
       style={{
         flexDirection: "row",
+        flexWrap: "wrap",
         justifyContent: "space-between",
         gap: SUMMARY_GAP,
         marginTop: 16,

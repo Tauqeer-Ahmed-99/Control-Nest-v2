@@ -87,7 +87,7 @@ class ControllerDevice:
                 scheduled_devices.append(device)
         return scheduled_devices
 
-    def switch_device(self, id: str, status: bool):
+    def switch_device(self, id: str, status: bool, user_id: str | None = None):
         try:
             device = self.get_device(id)
             output_device = device.output_device if device is not None else None
@@ -108,7 +108,8 @@ class ControllerDevice:
                                 self.controller_device_id,
                                 device.id,
                                 status_from,
-                                status_to 
+                                status_to,
+                                user_id,
                             )
                         )
             else:

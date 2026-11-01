@@ -14,11 +14,13 @@ import { ScrollView } from "react-native-virtualized-view";
 const Devices = () => {
   const { theme } = useTheme();
   const { data, isLoading, error } = useHouse();
-  const rooms = data?.details == null ? data?.data?.rooms ?? [] : [];
+  const rooms = data?.details == null ? (data?.data?.rooms ?? []) : [];
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, padding: 16, backgroundColor: theme.colors.primary }}>
+      <View
+        style={{ flex: 1, padding: 16, backgroundColor: theme.colors.primary }}
+      >
         <View style={{ gap: 12, marginTop: 10 }}>
           <LoadingSkeleton height={18} width="38%" />
           <CardGridSkeleton count={4} />
@@ -40,7 +42,9 @@ const Devices = () => {
         contentContainerStyle={{ paddingBottom: 132 }}
       >
         {error ? (
-          <MessageContainer message={error.message || "Unable to load devices."} />
+          <MessageContainer
+            message={error.message || "Unable to load devices."}
+          />
         ) : rooms.length > 0 ? (
           rooms.map((room) => (
             <View key={room.id}>
@@ -60,14 +64,14 @@ const Devices = () => {
                     rowGap={16}
                   />
                 ) : (
-                  <MessageContainer message="No device added to this room." />
+                  <MessageContainer message="No devices yet. Tap Add, then Device to connect one." />
                 )}
               </View>
             </View>
           ))
         ) : (
           <View>
-            <MessageContainer message="No rooms available." />
+            <MessageContainer message="Add a room first: tap Add, then Room." />
           </View>
         )}
       </ScrollView>

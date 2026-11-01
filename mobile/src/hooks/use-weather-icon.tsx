@@ -1,12 +1,10 @@
-import { getRandomItem } from "@/utils/helpers";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { Text, useTheme } from "@rneui/themed";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { View } from "react-native";
 
 const useWeatherIcons = (keyword: string) => {
   const { theme } = useTheme();
-  const [icon, setIcon] = useState<React.ReactNode>();
   const weatherIcons: { keywords: string; icon: React.ReactNode }[] = useMemo(
     () => [
       {
@@ -163,20 +161,13 @@ const useWeatherIcons = (keyword: string) => {
     [theme.colors.success],
   );
 
-  useEffect(() => {
-    if (keyword) {
-      const icons = weatherIcons.filter((icon) =>
-        keyword.split(" ").some((key) => icon.keywords.includes(key)),
-      );
-
-      if (icons.length === 0) {
-        setIcon(weatherIcons[0].icon);
-      } else if (icons.length === 1) {
-        setIcon(icons[0].icon);
-      } else {
-        setIcon(getRandomItem(icons).icon);
-      }
-    }
+  const icon = useMemo(() => {
+    const words = keyword.toLowerCase().split(" ");
+    return (
+      weatherIcons.find((item) =>
+        words.some((word) => word && item.keywords.includes(word)),
+      )?.icon ?? weatherIcons[0].icon
+    );
   }, [keyword, weatherIcons]);
 
   return (

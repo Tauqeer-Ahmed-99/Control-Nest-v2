@@ -6,6 +6,7 @@ import useDeviceControlLogs, {
   SearchDeviceControlLogsRequest,
 } from "@/hooks/use-device-control-logs";
 import { useHouseData } from "@/hooks/use-house";
+import useUserById from "@/hooks/use-user-by-id";
 import { ApiRoutes } from "@/routes/routes";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Text, useTheme } from "@rneui/themed";
@@ -264,6 +265,14 @@ const LogItem = ({
     .find((d) => d.id === deviceIdToCheck);
 
   const resolveUserName = useClerkUserName();
+  const { data: userResponse } = useUserById(logEntry.createdBy);
+  const user = userResponse?.data;
+  const userName = logEntry.createdBy.startsWith("CD-")
+    ? "Controller"
+    : user?.fullName?.trim() ||
+      [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
+      user?.username ||
+      resolveUserName(logEntry.createdBy);
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return "--";
@@ -323,7 +332,7 @@ const LogItem = ({
           }}
         >
           <Text style={{ fontSize: 12, color: grey2 }}>
-            {resolveUserName(logEntry.createdBy)}
+            {userName}
           </Text>
           <Text style={{ fontSize: 11, color: grey2 }}>
             {formatDate(logEntry.createdAt)}

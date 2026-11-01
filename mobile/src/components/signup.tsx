@@ -1,305 +1,316 @@
+import useFlowBack from "@/hooks/use-flow-back";
 import tryCatch from "@/utils/try-catch";
 import { useSignUp } from "@clerk/expo";
 import Feather from "@expo/vector-icons/Feather";
 import { Button, Text, useTheme } from "@rneui/themed";
-import React, { useCallback, useState } from "react";
-import { ScrollView, StyleSheet, TouchableOpacity, View } from "react-native";
+import { useState } from "react";
+import { TouchableOpacity, View } from "react-native";
+import { FlowHeading } from "./flow-screen";
 import InputField from "./input-field";
 
-const SignUp = ({ prevStep }: { prevStep: () => void }) => {
+type Step = "account" | "name" | "verify";
+
+export default function SignUp({ prevStep }: { prevStep: () => void }) {
   const { theme } = useTheme();
-  const { grey3 } = theme.colors;
-
   const { signUp } = useSignUp();
-
+  const [step, setStep] = useState<Step>("account");
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
-  const [emailAddress, setEmailAddress] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [emailAddress, setEmailAddress] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const fieldStyle = { paddingHorizontal: 0 };
+  const validEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailAddress.trim());
 
-  const onSignUpPress = useCallback(async () => {
-    const trimmedFirstName = firstName.trim();
-    const trimmedLastName = lastName.trim();
-
-    if (!trimmedFirstName || !trimmedLastName) {
-      setError("First name and last name are required.");
-      return;
-    }
-
+  function back() {
     setError("");
-    setIsLoading(true);
+    setNotice("");
+    if (step === "name") setStep("account");
+    else if (step === "verify") void restartAccount();
+    else prevStep();
+  }
 
-    const { data, error } = await tryCatch(
-      signUp.password({
+  useFlowBack(back, busy);
+
+  async function restartAccount() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await signUp.reset();
+      if (result.error) throw new Error(result.error.message);
+      setCode("");
+      setStep("account");
+    } catch {
+      setError("Couldn't restart signup. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function sendCode() {
+    const result = await signUp.verifications.sendEmailCode();
+    if (result.error) throw new Error(result.error.message);
+  }
+
+  async function createAccount() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await signUp.password({
         emailAddress: emailAddress.trim(),
         password,
-        firstName: trimmedFirstName,
-        lastName: trimmedLastName,
-      }),
-    );
-
-    if (error) {
-      setError(error.message);
-      setIsLoading(false);
-      return;
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      });
+      if (result.error) throw new Error(result.error.message);
+      setStep("verify");
+      await sendCode();
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Couldn't create your account. Try again.",
+      );
+    } finally {
+      setBusy(false);
     }
+  }
 
-    if (data.error) {
-      setError(data.error.message);
-      setIsLoading(false);
-      return;
+  async function verify() {
+    setBusy(true);
+    setError("");
+    setNotice("");
+    try {
+      const result = await signUp.verifications.verifyEmailCode({
+        code: code.trim(),
+      });
+      if (result.error) throw new Error(result.error.message);
+      const { data, error: finalizeError } = await tryCatch(signUp.finalize());
+      if (finalizeError) throw finalizeError;
+      if (data?.error) throw new Error(data.error.message);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Couldn't verify this code. Try again.",
+      );
+    } finally {
+      setBusy(false);
     }
-
-    const { data: sendData, error: sendError } = await tryCatch(
-      signUp.verifications.sendEmailCode(),
-    );
-
-    if (sendError) {
-      setError(sendError.message);
-      setIsLoading(false);
-      return;
-    }
-
-    if (sendData.error) {
-      setError(sendData.error.message);
-      setIsLoading(false);
-      return;
-    }
-
-    setIsVerifying(true);
-    setIsLoading(false);
-  }, [emailAddress, firstName, lastName, password, signUp]);
-
-  const onPressVerify = async () => {
-    setIsLoading(true);
-
-    const { data, error } = await tryCatch(
-      signUp.verifications.verifyEmailCode({ code }),
-    );
-
-    if (error) {
-      setIsLoading(false);
-      setError(error.message);
-      return;
-    }
-
-    if (data.error) {
-      setIsLoading(false);
-      setError(data.error.message);
-      return;
-    }
-
-    await tryCatch(signUp.finalize());
-
-    setIsLoading(false);
-    setIsVerifying(false);
-  };
+  }
 
   return (
-    <ScrollView
-      style={{ width: "100%", flexShrink: 1 }}
-      contentContainerStyle={{ flexGrow: 1 }}
-      keyboardShouldPersistTaps="handled"
-    >
-      <View style={styles.form}>
-        <View style={styles.header}>
-          <Text
-            style={{
-              fontFamily: "Lexend_600SemiBold",
-              fontSize: 24,
-            }}
-          >
-            Sign Up
-          </Text>
-          <TouchableOpacity disabled={isLoading} onPress={prevStep}>
-            <Feather name="arrow-left" size={24} color={grey3} />
-          </TouchableOpacity>
-        </View>
-
-        {!isVerifying && (
-          <>
-            <View style={styles.nameFields}>
-              <InputField
-                containerStyle={styles.nameField}
-                label="First name *"
-                value={firstName}
-                placeholder="First name"
-                autoCapitalize="words"
-                onChangeText={(value) => {
-                  setFirstName(value);
-                  setError("");
-                }}
-                disabled={isLoading}
-              />
-              <InputField
-                containerStyle={styles.nameField}
-                label="Last name *"
-                value={lastName}
-                placeholder="Last name"
-                autoCapitalize="words"
-                onChangeText={(value) => {
-                  setLastName(value);
-                  setError("");
-                }}
-                disabled={isLoading}
-              />
-            </View>
-            <InputField
-              containerStyle={styles.inputField}
-              label="Email address *"
-              autoCapitalize="none"
-              value={emailAddress}
-              placeholder="you@example.com"
-              keyboardType="email-address"
-              onChangeText={(email) => setEmailAddress(email)}
-              disabled={isLoading}
-            />
-            <InputField
-              containerStyle={styles.inputField}
-              label="Password *"
-              value={password}
-              placeholder="Enter password"
-              autoCapitalize="none"
-              secureTextEntry={!isPasswordVisible}
-              rightIcon={
-                <TouchableOpacity
-                  accessibilityRole="button"
-                  accessibilityLabel={
-                    isPasswordVisible ? "Hide password" : "Show password"
-                  }
-                  onPress={() =>
-                    setIsPasswordVisible((isVisible) => !isVisible)
-                  }
-                  style={{
-                    width: 44,
-                    height: 44,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Feather
-                    name={isPasswordVisible ? "eye-off" : "eye"}
-                    size={20}
-                    color={theme.colors.grey2}
-                  />
-                </TouchableOpacity>
-              }
-              onChangeText={(password) => setPassword(password)}
-              disabled={isLoading}
-            />
-            <Button
-              title="Sign Up"
-              color="success"
-              loading={isLoading}
-              buttonStyle={styles.button}
-              containerStyle={styles.buttonContainer}
-              titleStyle={[
-                styles.buttonTitle,
-                { color: theme.mode === "dark" ? "#10201A" : "#FFFFFF" },
-              ]}
-              onPress={!isLoading ? onSignUpPress : undefined}
-            />
-          </>
-        )}
-
-        {isVerifying && (
-          <>
-            <InputField
-              containerStyle={styles.inputField}
-              label="Verification code"
-              value={code}
-              placeholder="Enter code"
-              onChangeText={(code) => setCode(code)}
-              disabled={isLoading}
-            />
-            <Button
-              title="Verify Email"
-              color="success"
-              buttonStyle={styles.button}
-              containerStyle={styles.buttonContainer}
-              titleStyle={[
-                styles.buttonTitle,
-                { color: theme.mode === "dark" ? "#10201A" : "#FFFFFF" },
-              ]}
-              onPress={!isLoading ? onPressVerify : undefined}
-            />
-          </>
-        )}
-
-        {error && (
-          <Text
-            accessibilityRole="alert"
-            style={{
-              textAlign: "center",
-              color: theme.colors.error,
-              marginTop: 16,
-            }}
-          >
-            {error}
-          </Text>
-        )}
-
-        <Button
-          type="clear"
-          buttonStyle={styles.secondaryButton}
-          containerStyle={styles.buttonContainer}
-          titleStyle={styles.secondaryButtonTitle}
-          onPress={!isLoading ? prevStep : undefined}
+    <View style={{ gap: 20 }}>
+      <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+        <TouchableOpacity
+          onPress={back}
+          disabled={busy}
+          accessibilityRole="button"
+          accessibilityLabel="Previous signup step"
+          style={{
+            minHeight: 48,
+            minWidth: 48,
+            justifyContent: "center",
+            alignItems: "center",
+          }}
         >
-          Already have an account? Login Instead.
-        </Button>
-
-        <View nativeID="clerk-captcha" />
+          <Feather name="arrow-left" size={22} color={theme.colors.black} />
+        </TouchableOpacity>
+        <Text style={{ color: theme.colors.grey2, fontSize: 14 }}>
+          Step {step === "account" ? 1 : step === "name" ? 2 : 3} of 3
+        </Text>
       </View>
-    </ScrollView>
+      <FlowHeading
+        title={
+          step === "account"
+            ? "Create your account"
+            : step === "name"
+              ? "What's your name?"
+              : "Check your email"
+        }
+        description={
+          step === "account"
+            ? "Use one account for all your houses."
+            : step === "name"
+              ? "Help people in your house recognize you."
+              : `Enter the code sent to ${emailAddress.trim()}.`
+        }
+      />
+      {step === "account" ? (
+        <>
+          <InputField
+            containerStyle={fieldStyle}
+            label="Email address"
+            value={emailAddress}
+            onChangeText={(value) => {
+              setEmailAddress(value);
+              setError("");
+            }}
+            placeholder="you@example.com"
+            keyboardType="email-address"
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="email"
+            disabled={busy}
+          />
+          <InputField
+            containerStyle={fieldStyle}
+            label="Password"
+            value={password}
+            onChangeText={(value) => {
+              setPassword(value);
+              setError("");
+            }}
+            placeholder="Create a password"
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            autoCorrect={false}
+            autoComplete="new-password"
+            disabled={busy}
+            rightIcon={
+              <TouchableOpacity
+                onPress={() => setShowPassword((value) => !value)}
+                accessibilityRole="button"
+                accessibilityLabel={
+                  showPassword ? "Hide password" : "Show password"
+                }
+                style={{
+                  minWidth: 44,
+                  minHeight: 44,
+                  justifyContent: "center",
+                  alignItems: "center",
+                }}
+              >
+                <Feather
+                  name={showPassword ? "eye-off" : "eye"}
+                  size={20}
+                  color={theme.colors.grey2}
+                />
+              </TouchableOpacity>
+            }
+          />
+          <Button
+            disabled={!validEmail || !password}
+            onPress={() => {
+              setError("");
+              setStep("name");
+            }}
+          >
+            Continue
+          </Button>
+          <Button type="clear" onPress={prevStep}>
+            Already have an account? Sign In
+          </Button>
+        </>
+      ) : step === "name" ? (
+        <>
+          <InputField
+            containerStyle={fieldStyle}
+            label="First name"
+            value={firstName}
+            onChangeText={(value) => {
+              setFirstName(value);
+              setError("");
+            }}
+            placeholder="First name"
+            autoCapitalize="words"
+            autoComplete="given-name"
+            disabled={busy}
+          />
+          <InputField
+            containerStyle={fieldStyle}
+            label="Last name"
+            value={lastName}
+            onChangeText={(value) => {
+              setLastName(value);
+              setError("");
+            }}
+            placeholder="Last name"
+            autoCapitalize="words"
+            autoComplete="family-name"
+            disabled={busy}
+          />
+          <Button
+            loading={busy}
+            disabled={busy || !firstName.trim() || !lastName.trim()}
+            onPress={() => void createAccount()}
+          >
+            Create account
+          </Button>
+        </>
+      ) : (
+        <>
+          <InputField
+            containerStyle={fieldStyle}
+            label="Verification code"
+            value={code}
+            onChangeText={(value) => {
+              setCode(value);
+              setError("");
+            }}
+            placeholder="Enter code"
+            autoComplete="one-time-code"
+            keyboardType="number-pad"
+            disabled={busy}
+          />
+          <Button
+            loading={busy}
+            disabled={busy || !code.trim()}
+            onPress={() => void verify()}
+          >
+            Verify email
+          </Button>
+          <Button
+            type="clear"
+            disabled={busy}
+            onPress={async () => {
+              setBusy(true);
+              setError("");
+              setNotice("");
+              try {
+                await sendCode();
+                setNotice("A new code is on its way.");
+              } catch {
+                setError("Couldn't send a code. Try again.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Resend code
+          </Button>
+          <Button
+            type="clear"
+            disabled={busy}
+            onPress={() => void restartAccount()}
+          >
+            Change email
+          </Button>
+        </>
+      )}
+      {!!error && (
+        <Text
+          accessibilityRole="alert"
+          style={{ color: theme.colors.error, fontSize: 14, lineHeight: 22 }}
+        >
+          {error}
+        </Text>
+      )}
+      {!!notice && (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ color: theme.colors.grey2 }}
+        >
+          {notice}
+        </Text>
+      )}
+      <View nativeID="clerk-captcha" />
+    </View>
   );
-};
-
-export default SignUp;
-
-const styles = StyleSheet.create({
-  form: {
-    width: "100%",
-    paddingHorizontal: 24,
-    paddingTop: 24,
-    paddingBottom: 24,
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 20,
-  },
-  nameFields: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 12,
-  },
-  nameField: {
-    flex: 1,
-    paddingHorizontal: 0,
-  },
-  inputField: {
-    paddingHorizontal: 0,
-    marginBottom: 12,
-  },
-  button: { width: 240, borderRadius: 25 },
-  secondaryButton: {
-    marginTop: 16,
-    width: 240,
-    borderRadius: 25,
-    backgroundColor: "transparent",
-  },
-  buttonContainer: {
-    borderRadius: 25,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  buttonTitle: { fontFamily: "Lexend_600SemiBold" },
-  secondaryButtonTitle: { fontFamily: "Lexend_500Medium", fontSize: 13 },
-});
+}

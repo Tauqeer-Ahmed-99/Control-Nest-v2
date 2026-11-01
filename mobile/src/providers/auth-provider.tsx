@@ -1,8 +1,10 @@
-import { getTypedRoute, Routes } from "@/routes/routes";
+import { canRestoreHouse } from "@/utils/onboarding";
+import { CONTROLLER_DEVICE_CONFIG } from "@/constants/storage";
+import { useGetMobileStorageData } from "@/hooks/use-mobile-storage-data";
+import { ControllerConfig } from "@/models/controller-config";
 import { useUser } from "@clerk/expo";
-import { router, useNavigationContainerRef, usePathname } from "expo-router";
-
-import React, { PropsWithChildren, useEffect, useState } from "react";
+import { router, usePathname, useRootNavigationState } from "expo-router";
+import { PropsWithChildren, useEffect } from "react";
 
 export interface TokenCache {
   getToken: (key: string) => Promise<string | undefined | null>;
@@ -11,50 +13,33 @@ export interface TokenCache {
 }
 
 export default function AuthProvider({ children }: PropsWithChildren) {
-  const { isSignedIn } = useUser();
-  const [isNavigationReady, setIsNavigationReady] = useState(false);
-  const rootNavigation = useNavigationContainerRef();
+  const { isLoaded, isSignedIn, user } = useUser();
+  const navigation = useRootNavigationState();
   const pathname = usePathname();
+  const configQuery = useGetMobileStorageData<ControllerConfig>(
+    CONTROLLER_DEVICE_CONFIG,
+  );
+  const hasHouse = canRestoreHouse(configQuery.data, user?.id);
 
   useEffect(() => {
-    const unsubscribe = rootNavigation.addListener("state", () => {
-      setIsNavigationReady(true);
-    });
-    return function cleanup() {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [rootNavigation]);
-
-  useEffect(() => {
-    if (isNavigationReady) {
-      if (isSignedIn) {
-        if (router.canDismiss()) router.dismissAll();
-
-        router.replace(getTypedRoute(Routes.HouseLogin));
-      } else {
-        if (router.canDismiss()) router.dismissAll();
-        router.replace(getTypedRoute(Routes.Auth));
-      }
+    if (!navigation?.key || !isLoaded || configQuery.isLoading) return;
+    if (!isSignedIn) {
+      if (pathname !== "/auth") router.replace("/auth");
+      return;
     }
-  }, [isSignedIn, isNavigationReady]);
-
-  useEffect(() => {
-    if (isNavigationReady) {
-      const isEntryRoute = pathname === "/" || pathname === "/index";
-      const isSignedInAuthRoute = isSignedIn && pathname === "/auth";
-
-      if (isEntryRoute || isSignedInAuthRoute) {
-        if (router.canDismiss()) router.dismissAll();
-        if (isSignedIn) {
-          router.replace(getTypedRoute(Routes.HouseLogin));
-        } else {
-          router.replace(getTypedRoute(Routes.Auth));
-        }
-      }
+    if (pathname === "/" || pathname === "/index" || pathname === "/auth") {
+      router.replace(hasHouse ? "/(tabs)/home" : "/house-login");
+    } else if (!hasHouse && pathname !== "/house-login") {
+      router.replace("/house-login");
     }
-  }, [isNavigationReady, isSignedIn, pathname]);
+  }, [
+    configQuery.isLoading,
+    hasHouse,
+    isLoaded,
+    isSignedIn,
+    navigation?.key,
+    pathname,
+  ]);
 
-  return <React.Fragment>{children}</React.Fragment>;
+  return children;
 }

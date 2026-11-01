@@ -57,7 +57,7 @@ const TabsLayout = () => {
             options={{
               headerShown: true,
               headerTintColor: theme.colors.black,
-              headerTitle: "Activity Center",
+              headerTitle: "Activity",
               headerTitleAlign: "center",
               headerShadowVisible: false,
               headerTitleStyle: {

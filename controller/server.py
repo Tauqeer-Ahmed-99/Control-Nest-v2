@@ -4,7 +4,7 @@ from typing import Annotated
 
 from dotenv import load_dotenv
 
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
 from services.controller_device import ControllerDevice
@@ -116,9 +116,13 @@ async def update_device(body: DeviceResponse):
     return APIResponse.from_data(message="Device Removed", data=result.data)
 
 @app.post("/device/switch", status_code=200)
-async def switch_device(body: SwitchDevice):
+async def switch_device(body: SwitchDevice, auth: Annotated[tuple[str, str], Depends(require_auth)]):
+    user_id, _ = auth
+    if body.userId is not None and body.userId != user_id:
+        raise HTTPException(status_code=403, detail="Switch user must match the authenticated user.")
+
     result = await try_except(
-        controller_device.switch_device(body.deviceId, body.status)
+        controller_device.switch_device(body.deviceId, body.status, user_id)
     )
 
     if result.error is not None:

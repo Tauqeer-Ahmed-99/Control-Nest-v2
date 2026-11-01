@@ -20,6 +20,7 @@ const InputField = ({
   keyboardType,
   rightIcon,
   containerStyle,
+  ...inputProps
 }: {
   label?: string;
   placeholder?: string;
@@ -32,12 +33,23 @@ const InputField = ({
   keyboardType?: KeyboardTypeOptions;
   rightIcon?: IconNode;
   containerStyle?: StyleProp<ViewStyle>;
-}) => {
+} & Pick<
+  TextInputProps,
+  | "autoComplete"
+  | "textContentType"
+  | "autoCorrect"
+  | "returnKeyType"
+  | "onSubmitEditing"
+  | "maxLength"
+  | "accessibilityLabel"
+>) => {
   const { theme } = useTheme();
 
   return (
     <Input
-      containerStyle={containerStyle}
+      {...inputProps}
+      accessibilityLabel={inputProps.accessibilityLabel ?? label}
+      containerStyle={[{ paddingHorizontal: 0 }, containerStyle]}
       label={label}
       labelStyle={[styles.labelStyle, { color: theme.colors.grey2 }]}
       placeholder={placeholder}

@@ -104,6 +104,7 @@ class ScheduleService:
                     self.controller_device.switch_device(
                         device.id,
                         desired_status,
+                        device.scheduled_by,
                     )
 
                     self._last_applied[device.id] = desired_status

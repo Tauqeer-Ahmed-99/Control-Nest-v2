@@ -7,6 +7,8 @@ export type ControllerDeviceConfig = {
 };
 export type TunnelConfig = { hostname: string };
 export type ControllerConfig = {
+  // Associates the last chosen house with its signed-in account on this phone.
+  userId?: string;
   house: HouseConfig;
   controllerDevice: ControllerDeviceConfig;
   tunnel: TunnelConfig;

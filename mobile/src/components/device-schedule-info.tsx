@@ -1,10 +1,19 @@
+import Feather from "@expo/vector-icons/Feather";
 import Switch from "@/components/switch";
 import Tile from "@/components/tile";
 import { Device } from "@/models/device";
-import { DateTimePickerAndroid } from "@react-native-community/datetimepicker";
+import DateTimePicker, {
+  DateTimePickerAndroid,
+} from "@react-native-community/datetimepicker";
 import { Button, Text, useTheme } from "@rneui/themed";
-import React, { useCallback, useMemo } from "react";
-import { TouchableOpacity, View } from "react-native";
+import React, { useCallback, useMemo, useState } from "react";
+import {
+  Platform,
+  ScrollView,
+  TouchableOpacity,
+  useWindowDimensions,
+  View,
+} from "react-native";
 
 const DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -28,38 +37,55 @@ const DeviceScheduleInfo = ({
   isError: boolean;
 }) => {
   const { theme } = useTheme();
-  const { primary, error, grey3, grey5, success } = theme.colors;
+  const { fontScale } = useWindowDimensions();
+  const { primary, error, grey5, success } = theme.colors;
 
+  const [activeTime, setActiveTime] = useState<"start" | "off" | null>(null);
+  const [pickerDate, setPickerDate] = useState(() => new Date());
   const scheduledDays = useMemo(
     () => getScheduledDays(device?.daysScheduled ?? ""),
-    [device],
+    [device?.daysScheduled],
   );
   const areAllDaysSelected = scheduledDays.every(Boolean);
-  const selectedDayTextColor =
-    theme.mode === "dark" ? "#10201A" : "#FFFFFF";
+  const selectedDayTextColor = theme.mode === "dark" ? "#10201A" : "#FFFFFF";
 
-  const showtimePicker = useCallback((timeFor: "start" | "off") => {
-    DateTimePickerAndroid.open({
-      value: new Date(),
-      onChange: (e, d) => {
-        if (e.type === "set") {
-          const date = `${d?.getHours()}:${d?.getMinutes()}`;
-          if (timeFor === "start") {
-            setDevice((device) => ({
-              ...device!,
-              startTime: date,
-            }));
-          } else {
-            setDevice((device) => ({
-              ...device!,
-              offTime: date,
-            }));
+  const showtimePicker = useCallback(
+    (timeFor: "start" | "off") => {
+      const initial = new Date();
+      const saved = timeFor === "start" ? device?.startTime : device?.offTime;
+      if (saved) {
+        const [hours, minutes] = saved.split(":").map(Number);
+        if (Number.isFinite(hours) && Number.isFinite(minutes))
+          initial.setHours(hours, minutes, 0, 0);
+      }
+      if (Platform.OS === "ios") {
+        setPickerDate(initial);
+        setActiveTime(timeFor);
+        return;
+      }
+      DateTimePickerAndroid.open({
+        value: initial,
+        onChange: (e, d) => {
+          if (e.type === "set" && d) {
+            const date = `${d.getHours().toString().padStart(2, "0")}:${d.getMinutes().toString().padStart(2, "0")}`;
+            if (timeFor === "start") {
+              setDevice((device) => ({
+                ...device!,
+                startTime: date,
+              }));
+            } else {
+              setDevice((device) => ({
+                ...device!,
+                offTime: date,
+              }));
+            }
           }
-        }
-      },
-      mode: "time",
-    });
-  }, []);
+        },
+        mode: "time",
+      });
+    },
+    [device?.startTime, device?.offTime, setDevice],
+  );
 
   const handleDaysSelection = useCallback(
     (dayIndex: number, day: string) => {
@@ -86,7 +112,7 @@ const DeviceScheduleInfo = ({
         }));
       }
     },
-    [device],
+    [scheduledDays, setDevice],
   );
 
   return (
@@ -98,7 +124,7 @@ const DeviceScheduleInfo = ({
           justifyContent: "space-between",
         }}
       >
-        <Text style={{ fontSize: 16 }}>Scheduled</Text>
+        <Text style={{ fontSize: 16 }}>Schedule</Text>
         <View
           style={{
             height: 45,
@@ -112,6 +138,7 @@ const DeviceScheduleInfo = ({
           }}
         >
           <Switch
+            accessibilityLabel="Schedule this device"
             value={device?.isScheduled ?? false}
             onChange={(value) =>
               setDevice((device) => ({
@@ -124,44 +151,70 @@ const DeviceScheduleInfo = ({
       </View>
       {device?.isScheduled && (
         <>
-          <View>
-            <Text style={{ fontSize: 16 }}>Days Scheduled</Text>
+          <View style={{ gap: 8 }}>
             <View
               style={{
                 flexDirection: "row",
-                marginVertical: 12,
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: 12,
               }}
             >
-              {["All", ...DAYS].map((day, idx) => {
-                const isSelected =
-                  idx === 0
-                    ? areAllDaysSelected
-                    : scheduledDays[idx - 1] === true;
-
+              <Text style={{ fontSize: 16 }}>Repeat on</Text>
+              <TouchableOpacity
+                accessibilityRole="checkbox"
+                accessibilityLabel="Every day"
+                accessibilityState={{ checked: areAllDaysSelected }}
+                onPress={() => handleDaysSelection(-1, "All")}
+                style={{
+                  minHeight: 44,
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 6,
+                }}
+              >
+                <Feather
+                  name={areAllDaysSelected ? "check-square" : "square"}
+                  size={18}
+                  color={success}
+                />
+                <Text style={{ color: theme.colors.grey2, fontSize: 13 }}>
+                  Every day
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator
+              style={{ flexGrow: 0 }}
+              contentContainerStyle={{ flexGrow: 1, gap: 2, paddingBottom: 6 }}
+            >
+              {DAYS.map((day, index) => {
+                const isSelected = scheduledDays[index];
                 return (
                   <TouchableOpacity
                     key={day}
-                    onPress={() => handleDaysSelection(idx - 1, day)}
                     accessibilityRole="checkbox"
+                    accessibilityLabel={day}
                     accessibilityState={{ checked: isSelected }}
+                    onPress={() => handleDaysSelection(index, day)}
                     style={{
-                      width: "12.5%",
+                      flexGrow: 1,
+                      minWidth: Math.max(44, 36 * fontScale),
+                      minHeight: 44,
+                      paddingVertical: 10,
+                      paddingHorizontal: 4,
+                      borderRadius: 12,
+                      borderWidth: 1,
                       alignItems: "center",
                       justifyContent: "center",
-                      height: 44,
-                      borderTopLeftRadius: idx === 0 ? 12 : undefined,
-                      borderBottomLeftRadius: idx === 0 ? 12 : undefined,
-                      borderTopRightRadius: idx === 7 ? 12 : undefined,
-                      borderBottomRightRadius: idx === 7 ? 12 : undefined,
-                      borderRightWidth: 1,
-                      borderLeftWidth: idx === 0 ? 1 : undefined,
-                      borderBottomWidth: 1,
-                      borderTopWidth: 1,
                       borderColor:
-                        isError && !scheduledDays.some((day) => day)
+                        isError && !scheduledDays.some(Boolean)
                           ? error
-                          : grey3,
-                      backgroundColor: isSelected ? success : undefined,
+                          : theme.colors.greyOutline,
+                      backgroundColor: isSelected
+                        ? success
+                        : theme.colors.secondary,
                     }}
                   >
                     <Text
@@ -169,7 +222,7 @@ const DeviceScheduleInfo = ({
                         color: isSelected
                           ? selectedDayTextColor
                           : theme.colors.black,
-                        fontSize: 11,
+                        fontSize: 12,
                         fontFamily: "Lexend_500Medium",
                       }}
                     >
@@ -178,7 +231,7 @@ const DeviceScheduleInfo = ({
                   </TouchableOpacity>
                 );
               })}
-            </View>
+            </ScrollView>
           </View>
           <View
             style={[
@@ -195,7 +248,7 @@ const DeviceScheduleInfo = ({
                 : undefined,
             ]}
           >
-            <Text style={{ fontSize: 16 }}>Start Time</Text>
+            <Text style={{ fontSize: 16 }}>Turn on</Text>
             <Button type="clear" onPress={() => showtimePicker("start")}>
               <Text>{device?.startTime ? device?.startTime : "Set Time"}</Text>
             </Button>
@@ -215,11 +268,53 @@ const DeviceScheduleInfo = ({
                 : undefined,
             ]}
           >
-            <Text style={{ fontSize: 16 }}>Off Time</Text>
+            <Text style={{ fontSize: 16 }}>Turn off</Text>
             <Button type="clear" onPress={() => showtimePicker("off")}>
               <Text>{device?.offTime ? device?.offTime : "Set Time"}</Text>
             </Button>
           </View>
+          {Platform.OS === "ios" && activeTime && (
+            <View style={{ gap: 8 }}>
+              <DateTimePicker
+                value={pickerDate}
+                mode="time"
+                display="spinner"
+                themeVariant={theme.mode === "dark" ? "dark" : "light"}
+                onChange={(_event, date) => {
+                  if (!date) return;
+                  setPickerDate(date);
+                  const time = `${date.getHours().toString().padStart(2, "0")}:${date.getMinutes().toString().padStart(2, "0")}`;
+                  setDevice((current) =>
+                    current
+                      ? {
+                          ...current,
+                          [activeTime === "start" ? "startTime" : "offTime"]:
+                            time,
+                        }
+                      : current,
+                  );
+                }}
+              />
+              <Button
+                type="clear"
+                onPress={() => {
+                  const time = `${pickerDate.getHours().toString().padStart(2, "0")}:${pickerDate.getMinutes().toString().padStart(2, "0")}`;
+                  setDevice((current) =>
+                    current
+                      ? {
+                          ...current,
+                          [activeTime === "start" ? "startTime" : "offTime"]:
+                            time,
+                        }
+                      : current,
+                  );
+                  setActiveTime(null);
+                }}
+              >
+                Done
+              </Button>
+            </View>
+          )}
         </>
       )}
     </Tile>

@@ -78,9 +78,9 @@ export function SiteHeader() {
           >
             Setup guide
           </Link>
-          <Link href="/dashboard" onClick={() => setOpen(false)}>
+          {/* <Link href="/dashboard" onClick={() => setOpen(false)}>
             My houses
-          </Link>
+          </Link> */}
           <a
             href={repositoryUrl}
             className="nav-source"

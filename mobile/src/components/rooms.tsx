@@ -32,7 +32,9 @@ const Rooms = () => {
   if (!data) {
     return (
       <View style={{ marginVertical: 16 }}>
-        <Text style={{ textAlign: "center", color: error ? errorColor : grey3 }}>
+        <Text
+          style={{ textAlign: "center", color: error ? errorColor : grey3 }}
+        >
           {error?.message ?? "No house is connected yet."}
         </Text>
       </View>
@@ -63,7 +65,7 @@ const Rooms = () => {
         items={rooms}
         renderItem={(room) => <RoomCard room={room} />}
         rowGap={16}
-        noDataMessage="Rooms not available create a new room."
+        noDataMessage="Your rooms will appear here. Tap Add, then Room to create your first one."
       />
     </View>
   );

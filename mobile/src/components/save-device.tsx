@@ -1,111 +1,110 @@
 import Tile from "@/components/tile";
 import useConfigureDevice from "@/hooks/use-configure-device";
-import { useRoomData } from "@/hooks/use-house";
-import useUsername from "@/hooks/use-username";
 import { Device } from "@/models/device";
 import { ApiRoutes } from "@/routes/routes";
-import { useUser } from "@clerk/expo";
-import { BottomSheet, Button, Text, useTheme } from "@rneui/themed";
+import { Button, Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
-import { useLocalSearchParams } from "expo-router";
-import React from "react";
-import { ActivityIndicator, ToastAndroid, View } from "react-native";
+import { Dispatch, MutableRefObject, SetStateAction, useState } from "react";
 
-const SaveDevice = ({
+export default function SaveDevice({
   device,
   deviceNameRef,
   deviceWattageRef,
   setIsError,
 }: {
   device?: Device | null;
-  deviceNameRef: React.MutableRefObject<string>;
-  deviceWattageRef: React.MutableRefObject<string>;
-  setIsError: React.Dispatch<React.SetStateAction<boolean>>;
-}) => {
-  const {
-    theme: {
-      colors: { primary, success },
-    },
-  } = useTheme();
-  const { roomId } = useLocalSearchParams();
-  const room = useRoomData(roomId as string);
+  deviceNameRef: MutableRefObject<string>;
+  deviceWattageRef: MutableRefObject<string>;
+  setIsError: Dispatch<SetStateAction<boolean>>;
+}) {
+  const { theme } = useTheme();
   const queryClient = useQueryClient();
-  const { mutate: configureDevice, isPending: isConfigureDeviceLoading } =
-    useConfigureDevice();
-  const { user } = useUser();
-  const username = useUsername();
-
-  const saveDeviceConfig = () => {
-    if (device?.isScheduled) {
-      const isSomeDaysSelected = Boolean(device.daysScheduled?.trim());
-      if (!isSomeDaysSelected || !device.startTime || !device.offTime) {
-        setIsError(true);
-        ToastAndroid.show(
-          "Atlease one day must be selected and Start, Off time is required to schedule a device.",
-          ToastAndroid.LONG,
-        );
-        return;
-      }
-    }
-
-    configureDevice(
-      {
-        roomId: device?.roomId!,
-        deviceId: device?.id!,
-        deviceName: deviceNameRef.current,
-        pinNumber: device?.pinNumber,
-        gpioPinNumber: device?.gpioPinNumber,
-        status: device?.status,
-        isDefault: device?.isDefault,
-        isScheduled: device?.isScheduled,
-        daysScheduled: device?.daysScheduled ?? undefined,
-        startTime: device?.startTime ?? undefined,
-        offTime: device?.offTime ?? undefined,
-        wattage: isNaN(Number(deviceWattageRef.current))
-          ? 0.0
-          : Number(deviceWattageRef.current),
-      },
-      {
-        onSuccess: (res) => {
-          if (res.success) {
-            queryClient.invalidateQueries({ queryKey: [ApiRoutes.UserHouse] });
-          } else {
-            ToastAndroid.show(res.message, ToastAndroid.LONG);
-          }
-        },
-        onError: (res) => {
-          ToastAndroid.show(res.message, ToastAndroid.LONG);
-        },
-      },
-    );
-  };
-
+  const mutation = useConfigureDevice();
+  const [error, setError] = useState("");
+  const [saved, setSaved] = useState(false);
   return (
-    <>
-      <Tile>
-        <Button disabled={isConfigureDeviceLoading} onPress={saveDeviceConfig}>
-          Save
-        </Button>
-      </Tile>
-      <BottomSheet isVisible={isConfigureDeviceLoading}>
-        <View
-          style={{
-            height: 100,
-            padding: 20,
-            borderTopLeftRadius: 16,
-            borderTopRightRadius: 16,
-            backgroundColor: primary,
-            flexDirection: "row",
-            alignItems: "center",
-            gap: 16,
-          }}
+    <Tile>
+      <Button
+        loading={mutation.isPending}
+        disabled={mutation.isPending || !device}
+        onPress={() => {
+          if (!device) return;
+          setError("");
+          setSaved(false);
+          setIsError(false);
+          if (!deviceNameRef.current.trim()) {
+            setError("Enter a device name.");
+            return;
+          }
+          const wattage = Number(deviceWattageRef.current);
+          if (!Number.isFinite(wattage) || wattage < 0) {
+            setError("Enter a power rating of zero or more.");
+            return;
+          }
+          if (
+            device.isScheduled &&
+            (!device.daysScheduled?.trim() ||
+              !device.startTime ||
+              !device.offTime)
+          ) {
+            setIsError(true);
+            setError(
+              "Choose at least one day and both times for the schedule.",
+            );
+            return;
+          }
+          mutation.mutate(
+            {
+              roomId: device.roomId,
+              deviceId: device.id,
+              deviceName: deviceNameRef.current.trim(),
+              pinNumber: device.pinNumber,
+              gpioPinNumber: device.gpioPinNumber,
+              status: device.status,
+              isDefault: device.isDefault,
+              isScheduled: device.isScheduled,
+              daysScheduled: device.daysScheduled ?? undefined,
+              startTime: device.startTime ?? undefined,
+              offTime: device.offTime ?? undefined,
+              wattage,
+            },
+            {
+              onSuccess: (result) => {
+                if (!result.success) {
+                  setError(result.message);
+                  return;
+                }
+                setSaved(true);
+                void queryClient.invalidateQueries({
+                  queryKey: [ApiRoutes.UserHouse],
+                });
+                void queryClient.invalidateQueries({
+                  queryKey: [ApiRoutes.AvailableGPIOPins],
+                });
+              },
+              onError: (cause) => setError(cause.message),
+            },
+          );
+        }}
+      >
+        Save changes
+      </Button>
+      {!!error && (
+        <Text
+          accessibilityRole="alert"
+          style={{ color: theme.colors.error, marginTop: 12 }}
         >
-          <ActivityIndicator size="large" color={success} />
-          <Text>Loading, please wait...</Text>
-        </View>
-      </BottomSheet>
-    </>
+          {error}
+        </Text>
+      )}
+      {saved && (
+        <Text
+          accessibilityLiveRegion="polite"
+          style={{ color: theme.colors.success, marginTop: 12 }}
+        >
+          Changes saved
+        </Text>
+      )}
+    </Tile>
   );
-};
-
-export default SaveDevice;
+}

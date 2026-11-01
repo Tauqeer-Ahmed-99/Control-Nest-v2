@@ -1,3 +1,4 @@
+import SheetHeader from "@/components/sheet-header";
 import AvailableRooms from "@/components/available-rooms";
 import DeviceCard from "@/components/device-card";
 import Grid from "@/components/grid";
@@ -58,7 +59,12 @@ const Room = () => {
       accessibilityLabel={`Delete ${room?.name ?? "room"}`}
       hitSlop={10}
       onPress={() => setIsDeleteRoomConfirmationOpen(true)}
-      style={{ width: 44, height: 44, alignItems: "center", justifyContent: "center" }}
+      style={{
+        width: 44,
+        height: 44,
+        alignItems: "center",
+        justifyContent: "center",
+      }}
     >
       <MaterialIcons name="delete-outline" size={24} color="white" />
     </TouchableOpacity>
@@ -85,7 +91,9 @@ const Room = () => {
     return (
       <View style={{ flex: 1, backgroundColor: primary, padding: 18 }}>
         <MessageContainer
-          message={houseQuery.error?.message ?? `Room with id '${roomId}' not found.`}
+          message={
+            houseQuery.error?.message ?? `Room with id '${roomId}' not found.`
+          }
         />
       </View>
     );
@@ -131,9 +139,12 @@ const Room = () => {
             gap: 16,
           }}
         >
-          <Text style={{ textAlign: "center", fontSize: 18 }}>
-            Delete {room.name}
-          </Text>
+          <SheetHeader
+            title={`Delete ${room.name}`}
+            onClose={() => setIsDeleteRoomConfirmationOpen(false)}
+            closeLabel="Close delete room confirmation"
+            disabled={isDeletingRoom}
+          />
           <Text>Are you sure you want to delete {room.name}?</Text>
           <View
             style={{
@@ -149,11 +160,7 @@ const Room = () => {
             >
               Cancel
             </Button>
-            <Button
-              color="error"
-              loading={isDeletingRoom}
-              onPress={deleteRoom}
-            >
+            <Button color="error" loading={isDeletingRoom} onPress={deleteRoom}>
               Yes
             </Button>
           </View>

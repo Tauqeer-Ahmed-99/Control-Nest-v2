@@ -1,6 +1,5 @@
-import { useTheme } from "@rneui/themed";
 import React from "react";
-import { View } from "react-native";
+import { useWindowDimensions, View } from "react-native";
 import MessageContainer from "./message-container";
 
 function chunkArray<T>(array: T[], chunkSize: number) {
@@ -27,12 +26,11 @@ function Grid<T>({
   rowGap,
   noDataMessage,
 }: GridProps<T>) {
-  const {
-    theme: {
-      colors: { grey3 },
-    },
-  } = useTheme();
-  const data = chunkArray(items ?? [], rowSize ?? 2);
+  const { width, fontScale } = useWindowDimensions();
+  const data = chunkArray(
+    items ?? [],
+    rowSize ?? (width < 360 || fontScale > 1.2 ? 1 : 2),
+  );
 
   return (
     <View>

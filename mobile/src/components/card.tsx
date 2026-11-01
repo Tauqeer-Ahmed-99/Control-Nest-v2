@@ -16,14 +16,16 @@ function Card<T>({
   powerEnabled?: boolean;
 }) {
   const { theme } = useTheme();
-  const { width } = useWindowDimensions();
+  const { width, fontScale } = useWindowDimensions();
 
-  const cardWidth = (width - 52) / 2;
+  const singleColumn = width < 360 || fontScale > 1.2;
+  const cardWidth = singleColumn ? width - 36 : (width - 52) / 2;
 
   return (
     <View
       style={{
-        height: 188,
+        minHeight: 188,
+        height: 188 * Math.max(1, fontScale),
         width: cardWidth,
         backgroundColor: theme.colors.secondary,
         borderColor: theme.colors.grey5,

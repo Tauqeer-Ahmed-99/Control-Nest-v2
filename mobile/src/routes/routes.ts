@@ -17,6 +17,7 @@ export enum Routes {
 }
 
 export enum ApiRoutes {
+  User = "/api/v1/user",
   Houses = "/api/v1/houses",
   HouseControllers = "/api/v1/house/controllers",
   ControllerConfigure = "/controller/configure",

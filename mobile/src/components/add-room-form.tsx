@@ -1,113 +1,85 @@
 import useAddRoom from "@/hooks/use-add-room";
-import useHouse, { useHouseData } from "@/hooks/use-house";
+import useHouse from "@/hooks/use-house";
 import { ApiRoutes } from "@/routes/routes";
 import { Button, Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { ToastAndroid, View } from "react-native";
+import { View } from "react-native";
 import InputField from "./input-field";
-import LoadingSkeleton from "./loading-skeleton";
 import { FormSkeleton } from "./loading-placeholders";
 
-const AddRoomForm = ({ closeForm }: { closeForm: () => void }) => {
-  const {
-    theme: {
-      colors: { secondary },
-    },
-  } = useTheme();
+export default function AddRoomForm({ closeForm }: { closeForm: () => void }) {
+  const { theme } = useTheme();
   const houseQuery = useHouse();
-  const house = useHouseData();
-  const [roomName, setRoomName] = useState("");
-  const { mutate: addRoom, isPending } = useAddRoom();
-
+  const house = houseQuery.data?.success ? houseQuery.data.data : null;
+  const [name, setName] = useState("");
+  const [error, setError] = useState("");
+  const mutation = useAddRoom();
   const queryClient = useQueryClient();
-
-  if (houseQuery.isLoading) {
-    return (
-      <View
-        style={{
-          padding: 20,
-          paddingBottom: 28,
-          borderTopRightRadius: 24,
-          borderTopLeftRadius: 24,
-          backgroundColor: secondary,
-          gap: 16,
-        }}
-        accessible={false}
-        accessibilityElementsHidden
-      >
-        <LoadingSkeleton height={24} width="54%" />
-        <FormSkeleton fields={1} showActions />
-      </View>
-    );
-  }
-
-  const handleSaveRoom = () => {
-    addRoom(
-      {
-        houseId: house?.id!,
-        roomName,
-      },
-      {
-        onSuccess: (res) => {
-          if (res.success) {
-            queryClient.invalidateQueries({ queryKey: [ApiRoutes.UserHouse] });
-          } else {
-            ToastAndroid.show(res.message, ToastAndroid.LONG);
-          }
-          closeForm();
-        },
-        onError: (res) => {
-          ToastAndroid.show(res.message, ToastAndroid.LONG);
-        },
-      },
-    );
-  };
-
   return (
-    <View
-      style={{
-        padding: 20,
-        paddingBottom: 28,
-        borderTopRightRadius: 24,
-        borderTopLeftRadius: 24,
-        backgroundColor: secondary,
-        gap: 16,
-      }}
-    >
-      <Text
-        style={{
-          textAlign: "center",
-          fontSize: 20,
-          fontFamily: "Lexend_600SemiBold",
-        }}
-      >
-        Add New Room
-      </Text>
-      <InputField
-        label="Room Name"
-        placeholder="Enter room name"
-        defaultValue=""
-        onChangeText={(text) => setRoomName(text)}
-        disabled={isPending}
-      />
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "flex-end",
-          gap: 16,
-          paddingHorizontal: 16,
-        }}
-      >
-        <Button type="clear" onPress={closeForm} disabled={isPending}>
-          Cancel
-        </Button>
-        <Button onPress={handleSaveRoom} loading={isPending}>
-          Save
-        </Button>
-      </View>
+    <View style={{ padding: 20, gap: 20 }}>
+      {houseQuery.isLoading ? (
+        <FormSkeleton fields={1} showActions />
+      ) : houseQuery.error || !house ? (
+        <>
+          <Text accessibilityRole="alert" style={{ color: theme.colors.error }}>
+            Couldn&apos;t load this house.
+          </Text>
+          <Button type="outline" onPress={() => void houseQuery.refetch()}>
+            Try again
+          </Button>
+        </>
+      ) : (
+        <>
+          <Text style={{ color: theme.colors.grey2, fontSize: 16 }}>
+            In {house.name}
+          </Text>
+          <InputField
+            label="Room name"
+            placeholder="e.g. Living room"
+            value={name}
+            onChangeText={(value) => {
+              setName(value);
+              setError("");
+            }}
+            disabled={mutation.isPending}
+            containerStyle={{ paddingHorizontal: 0 }}
+          />
+          {!!error && (
+            <Text
+              accessibilityRole="alert"
+              style={{ color: theme.colors.error }}
+            >
+              {error}
+            </Text>
+          )}
+          <Button
+            loading={mutation.isPending}
+            disabled={mutation.isPending || !name.trim()}
+            onPress={() => {
+              setError("");
+              mutation.mutate(
+                { houseId: house.id, roomName: name.trim() },
+                {
+                  onSuccess: (result) => {
+                    if (!result.success) {
+                      setError(result.message);
+                      return;
+                    }
+                    void queryClient.invalidateQueries({
+                      queryKey: [ApiRoutes.UserHouse],
+                    });
+                    closeForm();
+                  },
+                  onError: (cause) => setError(cause.message),
+                },
+              );
+            }}
+          >
+            Add room
+          </Button>
+        </>
+      )}
     </View>
   );
-};
-
-export default AddRoomForm;
+}

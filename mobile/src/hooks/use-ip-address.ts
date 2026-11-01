@@ -4,13 +4,16 @@ import { useEffect, useState } from "react";
 const useIPAddress = () => {
   const [ipAddress, setIPAddress] = useState("");
 
-  const getIPAddres = async () => {
-    const ip = await Network.getIpAddressAsync();
-    setIPAddress(ip);
-  };
-
   useEffect(() => {
-    getIPAddres();
+    let active = true;
+    void Network.getIpAddressAsync()
+      .then((ip) => {
+        if (active) setIPAddress(ip);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
   }, []);
 
   return ipAddress;

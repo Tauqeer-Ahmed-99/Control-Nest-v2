@@ -1,3 +1,4 @@
+import useAccessibilityPreferences from "@/hooks/use-accessibility-preferences";
 import { useTheme } from "@rneui/themed";
 import { useEffect, useState } from "react";
 import {
@@ -28,10 +29,15 @@ const LoadingSkeleton = ({
     },
   } = useTheme();
 
+  const { reduceMotion } = useAccessibilityPreferences();
   const lowOpacity = startOpacity ?? 0.72;
   const [fadeAnim] = useState(() => new Animated.Value(lowOpacity));
 
   useEffect(() => {
+    if (reduceMotion) {
+      fadeAnim.setValue(lowOpacity);
+      return;
+    }
     const animation = Animated.loop(
       Animated.sequence([
         Animated.timing(fadeAnim, {
@@ -51,7 +57,7 @@ const LoadingSkeleton = ({
     animation.start();
 
     return () => animation.stop();
-  }, [fadeAnim, lowOpacity]);
+  }, [fadeAnim, lowOpacity, reduceMotion]);
 
   const styles = StyleSheet.create({
     skeleton: {

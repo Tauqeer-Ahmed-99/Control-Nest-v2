@@ -1,3 +1,4 @@
+import SheetHeader from "@/components/sheet-header";
 import {
   useAddHouseMember,
   useRemoveHouseMember,
@@ -28,7 +29,9 @@ const getUserName = (member: HouseMemberProfile) => {
     .join(" ")
     .trim();
 
-  return fullName || name || member.username || member.emailAddress || member.id;
+  return (
+    fullName || name || member.username || member.emailAddress || member.id
+  );
 };
 
 type PendingHouseMemberAction =
@@ -68,19 +71,18 @@ const HouseMembers = () => {
     return () => clearTimeout(timeout);
   }, [searchText]);
 
-  const searchUsersQuery = useSearchHouseUsers(
-    searchQuery,
-    isAdmin,
-  );
+  const searchUsersQuery = useSearchHouseUsers(searchQuery, isAdmin);
 
   const isMutating =
     addMember.isPending || updateMember.isPending || removeMember.isPending;
 
-  const memberError = membersQuery.error?.message ??
+  const memberError =
+    membersQuery.error?.message ??
     (membersQuery.data?.success === false
       ? membersQuery.data.message
       : undefined);
-  const searchError = searchUsersQuery.error?.message ??
+  const searchError =
+    searchUsersQuery.error?.message ??
     (searchUsersQuery.data?.success === false
       ? searchUsersQuery.data.message
       : undefined);
@@ -113,13 +115,14 @@ const HouseMembers = () => {
     }
   };
 
-  const confirmationTitle = pendingAction?.type === "add"
-    ? "Add house member?"
-    : pendingAction?.type === "update"
-      ? pendingAction.isAdmin
-        ? "Make house admin?"
-        : "Remove admin access?"
-      : "Remove house member?";
+  const confirmationTitle =
+    pendingAction?.type === "add"
+      ? "Add house member?"
+      : pendingAction?.type === "update"
+        ? pendingAction.isAdmin
+          ? "Make house admin?"
+          : "Remove admin access?"
+        : "Remove house member?";
   const confirmationMessage = pendingAction
     ? pendingAction.type === "add"
       ? `Add ${getUserName(pendingAction.member)} to this house?`
@@ -129,11 +132,12 @@ const HouseMembers = () => {
           : `Remove admin access from ${getUserName(pendingAction.member)}?`
         : `Remove ${getUserName(pendingAction.member)} from this house?`
     : "";
-  const confirmationButtonTitle = pendingAction?.type === "add"
-    ? "Add member"
-    : pendingAction?.type === "update"
-      ? "Update role"
-      : "Remove member";
+  const confirmationButtonTitle =
+    pendingAction?.type === "add"
+      ? "Add member"
+      : pendingAction?.type === "update"
+        ? "Update role"
+        : "Remove member";
 
   const renderMemberCard = (
     member: HouseMemberProfile,
@@ -289,11 +293,7 @@ const HouseMembers = () => {
               autoCapitalize="none"
               autoCorrect={false}
               leftIcon={
-                <Feather
-                  name="search"
-                  size={18}
-                  color={theme.colors.grey2}
-                />
+                <Feather name="search" size={18} color={theme.colors.grey2} />
               }
               onChangeText={setSearchText}
               onSubmitEditing={() => setSearchQuery(searchText.trim())}
@@ -332,7 +332,9 @@ const HouseMembers = () => {
                 {searchUsersQuery.isLoading ? (
                   <SearchResultsSkeleton />
                 ) : searchError ? (
-                  <Text style={{ color: theme.colors.error }}>{searchError}</Text>
+                  <Text style={{ color: theme.colors.error }}>
+                    {searchError}
+                  </Text>
                 ) : searchResults.length > 0 ? (
                   searchResults.map((result) => (
                     <View
@@ -461,9 +463,12 @@ const HouseMembers = () => {
             padding: 20,
           }}
         >
-          <Text style={{ fontFamily: "Lexend_600SemiBold", fontSize: 18 }}>
-            {confirmationTitle}
-          </Text>
+          <SheetHeader
+            title={confirmationTitle}
+            onClose={() => setPendingAction(null)}
+            closeLabel="Close member confirmation"
+            disabled={isMutating}
+          />
           <Text style={{ color: theme.colors.grey2 }}>
             {confirmationMessage}
           </Text>

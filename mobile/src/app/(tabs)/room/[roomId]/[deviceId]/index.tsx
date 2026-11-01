@@ -1,3 +1,4 @@
+import Accordion from "@/components/accordion";
 /* eslint-disable react-hooks/set-state-in-effect */
 import DefaultDeviceInfo from "@/components/default-device-info";
 import DeviceInputFieldsInfo from "@/components/device-input-field-info";
@@ -11,7 +12,7 @@ import Tile from "@/components/tile";
 import useHouse, { useDeviceData, useDevicesData } from "@/hooks/use-house";
 import { Device } from "@/models/device";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
-import { Text, useTheme } from "@rneui/themed";
+import { Button, Text, useTheme } from "@rneui/themed";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import { TouchableOpacity, View } from "react-native";
@@ -27,6 +28,8 @@ const DeviceComponent = () => {
   const [device, setDevice] = useState<Device | null>(deviceData);
   const deviceNameRef = useRef(device?.name ?? "");
   const deviceWattageRef = useRef(device?.wattage?.toString() ?? "");
+  const [showOptions, setShowOptions] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [isError, setIsError] = useState(false);
 
   useEffect(() => {
@@ -60,6 +63,23 @@ const DeviceComponent = () => {
     );
   }
 
+  if (!device)
+    return (
+      <View style={{ flex: 1, padding: 20, gap: 20, backgroundColor: primary }}>
+        <Text accessibilityRole="alert">
+          {houseQuery.error
+            ? "Couldn't load this device."
+            : "This device is no longer in this room."}
+        </Text>
+        <Button type="outline" onPress={() => void houseQuery.refetch()}>
+          Try again
+        </Button>
+        <Button type="clear" onPress={() => router.back()}>
+          Back to room
+        </Button>
+      </View>
+    );
+
   return (
     <View
       style={{
@@ -80,20 +100,43 @@ const DeviceComponent = () => {
             deviceWattageRef={deviceWattageRef}
           />
           <DeviceStatusInfo device={device} setDevice={setDevice} />
-          <DefaultDeviceInfo device={device} setDevice={setDevice} />
-          <DeviceScheduleInfo
-            device={device}
-            setDevice={setDevice}
-            isError={isError}
-          />
+          <Accordion
+            title="Schedule & room shortcut"
+            icon="clock"
+            summary={`${device.isScheduled ? "Schedule enabled" : "Schedule off"} - ${device.isDefault ? "Room shortcut enabled" : "Room shortcut off"}`}
+            expanded={showOptions || isError}
+            onToggle={() => {
+              if (isError) {
+                setIsError(false);
+                setShowOptions(false);
+              } else setShowOptions((value) => !value);
+            }}
+          >
+            <DefaultDeviceInfo device={device} setDevice={setDevice} />
+            <DeviceScheduleInfo
+              device={device}
+              setDevice={setDevice}
+              isError={isError}
+            />
+          </Accordion>
           <SaveDevice
             device={device}
             deviceNameRef={deviceNameRef}
             deviceWattageRef={deviceWattageRef}
             setIsError={setIsError}
           />
-          <DeviceUpdateHistory device={device} />
+          <Accordion
+            title="Recent changes"
+            summary="View device settings history"
+            icon="rotate-ccw"
+            expanded={showHistory}
+            onToggle={() => setShowHistory((value) => !value)}
+          >
+            <DeviceUpdateHistory device={device} />
+          </Accordion>
           <TouchableOpacity
+            accessibilityRole="button"
+            accessibilityLabel="View device activity"
             onPress={() =>
               router.push({
                 pathname: "/(tabs)/room/[roomId]/[deviceId]/control-logs",
@@ -112,7 +155,7 @@ const DeviceComponent = () => {
                   alignItems: "center",
                 }}
               >
-                <Text style={{ fontSize: 16 }}>Control Logs</Text>
+                <Text style={{ fontSize: 16 }}>Device activity</Text>
                 <MaterialIcons
                   name="chevron-right"
                   size={24}

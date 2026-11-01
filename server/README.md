@@ -90,6 +90,24 @@ tokens, credentials, and API keys are redacted before storage. Signed-in users
 can inspect traces for their own requests and controllers in **Settings →
 Request history** in the mobile app.
 
+## Device control attribution
+
+Manual switches carry the authenticated user's ID to the controller. After the
+hardware changes state, the controller sends that ID as `userId` in its existing
+control-log callback; the server stores it in `createdBy`. Scheduled transitions
+use `scheduledBy`. Older callbacks and system actions without a user retain the
+`CD-<controllerId>` fallback. Existing logs are unchanged.
+
+Authenticated clients can fetch `GET /api/v1/user?userId=<Clerk user ID>` for
+`id`, `fullName`, `firstName`, `lastName`, and `username`. The mobile
+`useUserById` hook caches these profiles and the control-log list displays the
+full name, with a fallback when a profile is unavailable. Provider credentials
+and private Clerk metadata are not returned. Deploy the server before updating
+controllers and the mobile app; full attribution requires the updated controller.
+
+Run attribution checks with `node --test tests/control-log-attribution.test.mjs`
+from `server` and `python -m unittest discover -s tests -v` from `controller`.
+
 ## Clerk email-only registration
 
 In the Clerk Dashboard for the instance shared by the website and mobile app:
