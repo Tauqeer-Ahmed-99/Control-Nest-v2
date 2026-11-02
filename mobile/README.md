@@ -1,5 +1,12 @@
 # Control Nest Mobile
 
+## Install dependencies
+
+Run `npm ci` from `mobile`. The committed `.npmrc` enables `legacy-peer-deps`
+for local installs. Each build profile in `eas.json` also sets
+`NPM_CONFIG_LEGACY_PEER_DEPS=true` for EAS Build's `npm ci --include=dev`, avoiding
+the current React peer dependency conflict in `@rneui/base`'s testing dependencies.
+
 ## Run Android Development Build
 
 From the `mobile` directory, run:
