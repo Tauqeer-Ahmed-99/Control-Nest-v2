@@ -389,7 +389,7 @@ class Engine:
                 for name in files:
                     os.chown(Path(root) / name, account.pw_uid, account.pw_gid)
             python = target / "controller/.venv/bin/python"
-            base = ["runuser", "-u", "control-nest-build", "--"]
+            base = [shutil.which("runuser") or "/usr/sbin/runuser", "-u", "control-nest-build", "--"]
             clean_env = {"PATH": "/usr/bin:/bin", "HOME": "/nonexistent", "PYTHONDONTWRITEBYTECODE": "1"}
             for command in ([sys.executable, "-m", "venv", str(python.parent.parent)],
                             [str(python), "-m", "pip", "install", "--no-index", "--only-binary=:all:", "--find-links", str(target / "wheels"), "-r", str(target / "controller/requirements.lock")],

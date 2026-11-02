@@ -83,7 +83,7 @@ def main():
     bootstrap_environment = root / "bootstrap/.venv"
     bootstrap_environment.mkdir(mode=0o755)
     os.chown(bootstrap_environment, builder.pw_uid, builder.pw_gid)
-    base = ["runuser", "-u", "control-nest-build", "--"]
+    base = [shutil.which("runuser"), "-u", "control-nest-build", "--"]
     environment = {"PATH": "/usr/bin:/bin", "HOME": "/nonexistent"}
     def build(arguments):
         subprocess.run(base + arguments, env=environment, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
