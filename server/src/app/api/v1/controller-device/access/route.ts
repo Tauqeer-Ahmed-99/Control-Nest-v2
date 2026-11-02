@@ -20,7 +20,7 @@ export const POST = withRequestObservability(
         userId: user.id,
       });
       return APIResponse.fromData({
-        data: { authorized: true, isAdmin: member.isAdmin },
+        data: { authorized: true, isAdmin: member.isAdmin, userId: user.id },
         message: "House access verified",
       });
     } catch (error) {

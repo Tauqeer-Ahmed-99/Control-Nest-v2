@@ -57,14 +57,18 @@ class APIService:
         return response.data
 
     def authorize_user(self, access_token: str) -> bool:
+        return bool(self.authorize_membership(access_token))
+
+    def authorize_membership(self, access_token: str) -> dict | None:
         try:
             response = requests.post(
                 f"{self.base_url}/api/v1/controller-device/access",
                 json={"accessToken": access_token}, headers=self.request_headers(), timeout=10,
             )
-            return response.ok and response.json().get("success") is True
+            result = response.json()
+            return result.get("data") if response.ok and result.get("success") is True else None
         except (requests.RequestException, ValueError, APIError):
-            return False
+            return None
 
     async def create_device_control_log(self, controller_device_id: str, device_id: str, status_from: bool, status_to: bool, user_id: str | None = None):
         try:

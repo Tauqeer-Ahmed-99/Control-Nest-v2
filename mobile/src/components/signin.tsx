@@ -58,7 +58,7 @@ const SignIn = ({ nextStep }: { nextStep: () => void }) => {
             return;
           }
 
-          router.replace(decorateUrl("/house-login") as Href);
+          router.replace(decorateUrl("/") as Href);
         },
       }),
     );

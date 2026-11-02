@@ -1,8 +1,12 @@
-
 #!/usr/bin/env bash
 set -euo pipefail
 
 # Register and start AutoPi-Hub systemd service
+
+if [[ -f /opt/control-nest/bootstrap/manager.py ]]; then
+    sudo systemctl restart autopihub.service
+    exit 0
+fi
 
 SERVICE_NAME="autopihub"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"

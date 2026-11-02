@@ -31,7 +31,13 @@ else
     fi
 
     mkdir -p "${CN_INSTALL_DIR}"
+    if [[ -f "${CN_INSTALL_DIR}/controller/.env" ]]; then
+        cp -p -- "${CN_INSTALL_DIR}/controller/.env" "${TEMP_DIR}/existing-controller.env"
+    fi
     cp -a "${CN_SOURCE_DIR}/." "${CN_INSTALL_DIR}/"
+    if [[ -f "${TEMP_DIR}/existing-controller.env" ]]; then
+        cp -p -- "${TEMP_DIR}/existing-controller.env" "${CN_INSTALL_DIR}/controller/.env"
+    fi
 
     echo "Repository downloaded to ${CN_INSTALL_DIR}. Starting controller installation..."
     bash "${CN_INSTALL_DIR}/controller/scripts/install.sh"
@@ -48,7 +54,7 @@ if [[ ! -f .env ]]; then
     exit 1
 fi
 
-for script in clock.sh packages.sh stores.sh cloudflared.sh service.sh; do
+for script in clock.sh packages.sh stores.sh cloudflared.sh provision-ota-keys.sh service.sh; do
     chmod +x "scripts/${script}"
     "scripts/${script}"
 done

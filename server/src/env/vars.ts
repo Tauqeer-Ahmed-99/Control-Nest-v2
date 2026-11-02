@@ -4,6 +4,12 @@ import z from "zod";
 import "dotenv/config";
 
 const EnvVarsSchema = z.object({
+  OTA_JOB_KEY_ID: z
+    .string()
+    .regex(/^[\w-]{1,64}$/)
+    .optional(),
+  OTA_JOB_PRIVATE_KEY: z.string().optional(),
+  OTA_RELEASE_PUBLIC_KEYS: z.string().default("{}"),
   DB_ENV: z.enum(["development", "production"]).default("development"),
   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: z
     .string()

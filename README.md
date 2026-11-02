@@ -23,7 +23,7 @@ The system has three parts:
 
 ## Internet access and security
 
-Configured controllers are reachable from the public Internet through their Cloudflare Tunnel hostname. The tunnel avoids configuring inbound port forwarding on the home router, but the controller is no longer local-network-only. The controller API validates Clerk session tokens and checks house membership with the hosted API. Every controller-to-server request uses its own revocable API key and installation identity; keys cannot read another controller?s devices or write its logs. Keep tunnel tokens, Clerk secret keys, database credentials, and other private deployment credentials out of documentation. The tracked `controller/.env` is the controller configuration used by this repository; review it before reusing or distributing the project.
+Configured controllers are reachable from the public Internet through their Cloudflare Tunnel hostname. The tunnel avoids configuring inbound port forwarding on the home router, but the controller is no longer local-network-only. The controller API validates Clerk session tokens and checks house membership with the hosted API. Every controller-to-server request uses its own revocable API key and installation identity; keys cannot read another controller?s devices or write its logs. Keep tunnel tokens, Clerk secret keys, database credentials, and other private deployment credentials out of documentation. The tracked `controller/.env` contains only public defaults and OTA verification keys; per-device credentials remain in protected persistent storage.
 
 Mobile build variables prefixed with `EXPO_PUBLIC_` are included in the client app and must not contain secret credentials. Use them only for values intended to be public, such as the API URL and Clerk publishable key.
 
@@ -37,13 +37,14 @@ curl -o- https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main
 
 The installer downloads the repository archive without Git, places the project under `~/Control-Nest-v2`, and sets up the Python environment, required packages, and the `autopihub` systemd service. It uses the tracked `controller/.env` configuration included in the archive.
 
-To update an installed controller, run:
+Bootstrap the protected updater once from the trusted controller checkout over SSH:
 
 ```bash
-curl -o- https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main/controller/scripts/update.sh | bash
+cd ~/Control-Nest-v2/controller
+bash scripts/bootstrap.sh
 ```
 
-The updater downloads the latest `main` archive, updates the controller's Python dependencies and files, then restarts and checks the `autopihub` service. If that service is not installed, it prints a warning and exits; run the installer first. Both commands run as the normal Pi user and use `sudo` for system operations. The scripts share repository settings and archive-download logic through `controller/scripts/common.sh`.
+Bootstrap provisions the public verification keys shipped in `controller/.env`. A house admin then uses **Settings > Firmware updates** in mobile. Updates install exact signed releases into separate environments, snapshot persistent data, and restore the recorded working release if activation fails. The old `main` overlay updater is disabled. See [OTA operations](docs/ota-operations.md) for deployment, EAS setup, key ownership, backup and recovery. After bootstrap, private Pi settings belong in root-owned `/etc/control-nest/controller.env`.
 
 The source expects the following environment variable names. Controller values are supplied by the tracked `controller/.env`; configure hosted API values in the server's private environment. Do not add credentials to this README.
 
@@ -66,6 +67,7 @@ The source expects the following environment variable names. Controller values a
 - `SERVER_URL`
 - `CLERK_JWT_KEY` (the PEM public key used to verify Clerk session tokens; the controller does not need `CLERK_SECRET_KEY`)
 - `APP_PERSISTENT_STORAGE_PATH`
+- `OTA_RELEASE_PUBLIC_KEYS` and `OTA_JOB_PUBLIC_KEYS` (JSON maps of public verification keys, shipped in `controller/.env` and installed automatically)
 
 The shared controller Basic credentials (`CONTROLLER_USERNAME` / `CONTROLLER_PASSWORD` on the server and `API_USERNAME` / `API_PASSWORD` on the Pi) are retired. Remove them from deployment settings. API keys are generated per controller and stored as SHA-256 hashes on the server; raw keys are stored only in owner-readable controller JSON, never in mobile build variables.
 
@@ -74,6 +76,10 @@ For email-only registration, configure the Clerk instance as described in [serve
 ## Development entry points
 
 The hosted API and mobile app are separate projects with their own dependency manifests. Their package scripts are defined in `server/package.json` and `mobile/package.json`. Configure the required environment variables before starting either app. For Raspberry Pi controller installation and updates, use the commands above or see [`controller/README.md`](controller/README.md).
+
+## Update implementation guide
+
+See the [OTA design](docs/ota-updates-and-recovery.md) and [deployment/recovery runbook](docs/ota-operations.md) for mobile OTA delivery, admin-initiated controller updates, compatibility policy, mandatory upgrades, and recovery. Deployment and hardware acceptance remain separate from implementation.
 
 ## Repository layout
 

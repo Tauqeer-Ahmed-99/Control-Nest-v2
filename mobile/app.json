@@ -20,9 +20,7 @@
         "foregroundImage": "./assets/icon/icon.png"
       },
       "predictiveBackGestureEnabled": false,
-      "permissions": [
-        "android.permission.ACCESS_LOCAL_NETWORK"
-      ],
+      "permissions": ["android.permission.ACCESS_LOCAL_NETWORK"],
       "package": "com.tauqeerahmed.cnm"
     },
     "web": {
@@ -54,6 +52,13 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "301bd0a5-25cf-4959-a60e-58d733e30624"
+      }
+    },
+    "owner": "tauqeerahmed"
   }
 }

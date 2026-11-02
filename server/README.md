@@ -5,6 +5,8 @@ This Next.js project serves the Control Nest website and the existing
 Control Nest is the mobile app; AutoPiHub is the Raspberry Pi controller service.
 Built by NMT Solutions OPC Pvt Ltd.
 
+The repository root is linked to the existing [control-nest-v2 Vercel project](https://vercel.com/tauqeerahmed99s-projects/control-nest-v2). Its Vercel Root Directory is `server`; run Vercel CLI commands from the repository root. The existing production API origin is `https://controlnest-v2.nmt-solutions.in`. Local `.vercel` metadata and generated environment files are ignored by Git.
+
 ## Website
 
 - `/` introduces the app with an interactive sample home, AutoPiHub overview,
@@ -38,6 +40,14 @@ No new environment variables are required. Provider secrets stay on the server;
 only the public API origin and Clerk publishable key belong in the mobile build.
 The public guide contains no server deployment or credential configuration steps.
 Server environment and database instructions below are for service maintainers.
+
+## OTA releases and policy
+
+Apply `src/database/migrations/add-firmware-updates.sql` before deploying OTA support. Configure server-only `OTA_JOB_KEY_ID`, `OTA_JOB_PRIVATE_KEY`, and the public PEM map `OTA_RELEASE_PUBLIC_KEYS` in private server configuration. No private signing key belongs on mobile or a controller. The catalog is empty and no upgrade floor is active until a maintainer registers verified published artifacts and a signed policy.
+
+`npm run ota:catalog -- register <catalog.json>`, `policy <signed-policy.json> [--controllers <private-rollout.json>]`, and `revoke <version>` manage publication eligibility separately from installation. Raising a minimum requires `--activate-minimums`. Public discovery omits rollout controller IDs. New-job/rollback/recovery issuance requires a current active house admin; ordered events require the paired controller's own API key/installation identity. See [OTA operations](../docs/ota-operations.md) for key rotation, rollout, migration, native build requirements, artifact generation and recovery.
+
+Signing configuration is provisioned in the linked Vercel project's development, preview and production environments: job key `jobs-2026-11-02` is a Secret; its ID and the public release-key map are Config values. The release signer stays outside Vercel. See [public key identities](../docs/ota-key-identities.json) for fingerprints. Existing deployments need a subsequent deployment to receive these environment values.
 
 ## Styling, components, and brand assets
 
@@ -126,7 +136,7 @@ Apply `src/database/migrations/add-controller-api-keys.sql` to an existing datab
 
 House admins generate one key per controller at My houses. Keys contain 256 random bits, are shown once, and are hashed with SHA-256 in PostgreSQL. The last four characters are safe to show in the UI. Replace key immediately invalidates the old key while retaining the Pi's installation binding; paste the replacement on that same Pi. Revoke blocks controller requests until a replacement is installed. Add another controller entry to connect another Pi.
 
-Retire `CONTROLLER_USERNAME` and `CONTROLLER_PASSWORD`. No new shared secret environment variables are needed. The server continues to own Cloudflare, database, weather, and Clerk secrets. The Pi owns its generated API key and tunnel token. The mobile app receives only house/controller names, IDs, and public hostnames.
+Retire `CONTROLLER_USERNAME` and `CONTROLLER_PASSWORD`. Controller provisioning uses per-device keys; OTA adds the separate signing configuration described above. The server continues to own Cloudflare, database, weather, Clerk and job-signing secrets. The Pi owns its generated API key and tunnel token. Mobile receives public connection details and narrowly scoped recovery authorizations.
 
 Management APIs: `GET /api/v1/houses`, `POST /api/v1/house`, and `GET/POST/PATCH /api/v1/house/controllers`. Controllers enroll with `POST /api/v1/controller-device/init`; all subsequent controller calls use `Authorization: Bearer <controller-api-key>` and `X-Controller-Installation-ID`. Request bodies and query strings cannot override the identity derived from the key. Device fetches and control logs are restricted to that controller's explicitly assigned devices. The `/controller-device/access` endpoint verifies a user session against the controller's house for inbound Pi requests, including public tunnel access.
 

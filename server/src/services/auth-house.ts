@@ -11,7 +11,12 @@ export const authorizeHouse = async ({
   checkAdmin?: boolean;
 }) => {
   const houseMember = await database.query.houseMembers.findFirst({
-    where: { houseId, userId },
+    where: {
+      houseId,
+      userId,
+      resourceStatus: "active",
+      house: { resourceStatus: "active" },
+    },
   });
 
   if (!houseMember) {
@@ -38,8 +43,16 @@ export const authorizeHouseByControllerDevice = async ({
   checkAdmin?: boolean;
 }) => {
   const controllerDevice = await database.query.controllerDevices.findFirst({
-    where: { id: controllerDeviceId },
-    with: { house: { with: { houseMembers: { where: { userId } } } } },
+    where: {
+      id: controllerDeviceId,
+      resourceStatus: "active",
+      house: { resourceStatus: "active" },
+    },
+    with: {
+      house: {
+        with: { houseMembers: { where: { userId, resourceStatus: "active" } } },
+      },
+    },
   });
 
   const houseMember = controllerDevice?.house?.houseMembers.at(0);

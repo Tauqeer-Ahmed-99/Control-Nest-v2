@@ -13,8 +13,7 @@ import { BottomSheet, Button, Text, useTheme } from "@rneui/themed";
 import { useQueryClient } from "@tanstack/react-query";
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { ToastAndroid, TouchableOpacity, View } from "react-native";
-import { ScrollView } from "react-native-virtualized-view";
+import { ScrollView, ToastAndroid, TouchableOpacity, View } from "react-native";
 
 const Room = () => {
   const {

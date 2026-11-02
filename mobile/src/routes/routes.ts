@@ -14,6 +14,8 @@ export enum Routes {
   Notifications = "(tabs)/notifications",
   Settings = "(tabs)/settings",
   HouseMembers = "(tabs)/house-members",
+  FirmwareUpdates = "(tabs)/firmware-updates",
+  AppUpdates = "app-updates",
 }
 
 export enum ApiRoutes {
@@ -39,6 +41,13 @@ export enum ApiRoutes {
   Observability = "/api/v1/observability",
   Password = "/api/v1/controller-device/password",
   ControllerHealth = "/api/v1/controller-device/health",
+  ReleasePolicy = "/api/v1/releases/policy",
+  Firmware = "/api/v1/controller-device/firmware",
+  FirmwareJobs = "/api/v1/controller-device/firmware/jobs",
+  RecoveryGrant = "/api/v1/controller-device/firmware/recovery-grant",
+  ControllerFirmware = "/controller/firmware",
+  ControllerFirmwareJobs = "/controller/firmware/jobs",
+  ControllerRollback = "/controller/firmware/rollback",
 }
 
 export interface Route {
@@ -59,6 +68,8 @@ const routes: Route[] = [
   { path: Routes.ControlLogs, label: "Control Logs", showheader: true },
   { path: Routes.Devices, label: "Devices", showheader: true },
   { path: Routes.Notifications, label: "Notifications", showheader: true },
+  { path: Routes.FirmwareUpdates, label: "Firmware updates", showheader: true },
+  { path: Routes.AppUpdates, label: "App updates", showheader: true },
 ];
 
 export const getTypedRoute = <T>(route: T) => route as unknown as Href;

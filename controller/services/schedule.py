@@ -72,6 +72,9 @@ class ScheduleService:
                 pass
 
     async def check_schedules(self) -> None:
+        from services.maintenance import paused
+        if paused():
+            return
         # Capture the time once so every device uses the same time boundary.
         now = datetime.now().astimezone()
 

@@ -1,4 +1,6 @@
 import { AccessibilityPreferencesProvider } from "@/providers/accessibility-provider";
+import { ReleaseProvider } from "@/providers/release-provider";
+import MobileCompatibilityGate from "@/components/mobile-compatibility-gate";
 import { ClerkLoaded, ClerkProvider } from "@clerk/expo";
 import { tokenCache } from "@clerk/expo/token-cache";
 import { Lexend_100Thin } from "@expo-google-fonts/lexend/100Thin";
@@ -159,31 +161,47 @@ function AppLayout({ publishableKey }: { publishableKey: string }) {
           >
             <SplashProvider isFontsLoaded={isFontsLoaded}>
               <ClerkLoaded>
-                <AuthProvider>
-                  <Stack>
-                    <Stack.Screen
-                      name="(tabs)"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="auth"
-                      options={{ headerShown: false }}
-                    />
-                    <Stack.Screen
-                      name="house-login"
-                      options={{
-                        title: "Houses & controllers",
-                        headerShown: false,
-                        headerTitleStyle: {
-                          color: palette.text,
-                        },
-                        headerStyle: {
-                          backgroundColor: palette.background,
-                        },
-                      }}
-                    />
-                  </Stack>
-                </AuthProvider>
+                <ReleaseProvider>
+                  <AuthProvider>
+                    <MobileCompatibilityGate>
+                      <Stack
+                        screenOptions={{
+                          contentStyle: { backgroundColor: palette.background },
+                        }}
+                      >
+                        <Stack.Screen
+                          name="index"
+                          options={{ headerShown: false, animation: "none" }}
+                        />
+                        <Stack.Screen
+                          name="+not-found"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="(tabs)"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="auth"
+                          options={{ headerShown: false }}
+                        />
+                        <Stack.Screen
+                          name="house-login"
+                          options={{
+                            title: "Houses & controllers",
+                            headerShown: false,
+                            headerTitleStyle: {
+                              color: palette.text,
+                            },
+                            headerStyle: {
+                              backgroundColor: palette.background,
+                            },
+                          }}
+                        />
+                      </Stack>
+                    </MobileCompatibilityGate>
+                  </AuthProvider>
+                </ReleaseProvider>
               </ClerkLoaded>
             </SplashProvider>
           </ClerkProvider>

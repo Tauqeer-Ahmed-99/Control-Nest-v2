@@ -1,0 +1,12 @@
+{
+  "revision": 1,
+  "effectiveAt": "2026-11-02T00:00:00.000Z",
+  "minimumMobile": "1.0.0",
+  "minimumController": "1.0.0",
+  "latest": null,
+  "apiContracts": [1],
+  "mobile": {
+    "android": { "runtimes": ["cn-native-1"], "minimumBuild": 0, "installUrl": null },
+    "ios": { "runtimes": [], "minimumBuild": "0", "installUrl": null }
+  }
+}

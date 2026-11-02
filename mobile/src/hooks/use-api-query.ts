@@ -2,6 +2,7 @@ import request, { ApiConfig, HTTPStatus } from "@/utils/network";
 import { useAuth } from "@clerk/expo";
 import { UseQueryResult, useQuery } from "@tanstack/react-query";
 import useRemoteUrl from "./use-remote-url";
+import { ApiError } from "@/utils/api-error";
 
 const useApiQuery = <T>(
   url: string,
@@ -11,9 +12,15 @@ const useApiQuery = <T>(
   const remoteUrl = useRemoteUrl();
   const baseUrl = config?.baseUrl ?? remoteUrl ?? "";
   return useQuery({
-    queryKey: [url, config?.searchParams, config?.body, userId],
+    queryKey: [
+      url,
+      config?.searchParams,
+      config?.body,
+      config?.publicRequest ? "public" : userId,
+      baseUrl,
+    ],
     queryFn: async () => {
-      const token = await getToken();
+      const token = config?.publicRequest ? null : await getToken();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         ...(config?.headers as Record<string, string> | undefined),
@@ -31,16 +38,22 @@ const useApiQuery = <T>(
             parsedRes?.detail?.[0]?.loc?.[1] ?? response.statusText
           }`;
         }
-        throw new Error(errorMessage);
+        throw new ApiError(errorMessage, response.status, parsedRes.errors);
       }
 
       return response.json();
     },
     staleTime: config?.queryConfig?.staleTime ?? 1000 * 60 * 5, // 5 minutes stale time or the given one
     placeholderData: config?.queryConfig?.placeholderData,
+    refetchInterval: config?.queryConfig?.refetchInterval,
+    retry: (count, error) =>
+      !(
+        error instanceof ApiError &&
+        [400, 401, 403, 404, 409, 426].includes(error.status)
+      ) && count < 2,
     enabled:
       !!baseUrl &&
-      isSignedIn &&
+      (config?.publicRequest || isSignedIn) &&
       Boolean(
         config?.queryConfig?.enabled == null || config?.queryConfig?.enabled,
       ),

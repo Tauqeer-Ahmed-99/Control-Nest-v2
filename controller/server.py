@@ -1,6 +1,8 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 from typing import Annotated
+import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -36,13 +38,16 @@ system_service = SystemService(controller_config_service, api_service, cloudflar
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
+    app.state.hardware_ready = False
     try:
         controller_device.initialize()
+        app.state.hardware_ready = True
     except Exception:
         # Keep setup reachable after key revocation or a network outage.
         print("Controller sync unavailable. Open setup to reconnect.")
 
-    await discovery_service.start()
+    if os.environ.get("CONTROL_NEST_SUPERVISED") != "1":
+        await discovery_service.start()
     await schedule_service.start()
     
     app.state.discovery_service = discovery_service
@@ -51,6 +56,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None]:
     try:
         yield
     finally:
+        await schedule_service.stop()
+        for device in controller_device.devices:
+            if device.output_device is not None:
+                device.output_device.close()
         await discovery_service.stop()
 
 
@@ -70,6 +79,29 @@ app.add_middleware(
     config_service=controller_config_service,
 )
 
+@app.get("/internal/maintenance/ready")
+def maintenance_ready(request: Request):
+    from services.maintenance import internal
+    internal(request)
+    return {"version": Path(__file__).with_name("VERSION").read_text().strip(), "apiContract": 1, "dataSchema": 1, "processId": os.getpid(),
+            "configuration": bool(controller_config_service.get_controller_config()) or not controller_config_service.is_configured(),
+            "gpio": request.app.state.hardware_ready, "schedules": schedule_service._task is not None and not schedule_service._task.done()}
+
+@app.post("/internal/maintenance/quiesce")
+async def maintenance_quiesce(request: Request):
+    from services.maintenance import internal
+    internal(request)
+    await schedule_service.stop()
+    controller_device.save_local_devices()
+    return {"paused": True}
+
+@app.post("/internal/maintenance/resume")
+async def maintenance_resume(request: Request):
+    from services.maintenance import internal
+    internal(request)
+    await schedule_service.start()
+    return {"paused": False}
+
 @app.get("/", status_code=200)
 def get_health():
     return APIResponse.from_data(message="System is healthy", data={"health": "ok"})
@@ -88,9 +120,10 @@ async def config_controller(body: ConfigController, auth: Annotated[tuple[str, s
     if result.error is not None:
         return APIResponse.from_error(result.error)
 
-    await discovery_service.stop()
-    discovery_service.device_name = controller_config_service.get_controller_device_name()
-    await discovery_service.start()
+    if os.environ.get("CONTROL_NEST_SUPERVISED") != "1":
+        await discovery_service.stop()
+        discovery_service.device_name = controller_config_service.get_controller_device_name()
+        await discovery_service.start()
     return APIResponse.from_data(message="Controller initialized", data=result.data)
 
 @app.post("/device", status_code=201)

@@ -1,6 +1,6 @@
 # Raspberry Pi controller
 
-The controller is a Python FastAPI service for the Control Nest Raspberry Pi. The scripts under `scripts/` install it and update its code without requiring Git.
+The controller is a Python FastAPI service for the Control Nest Raspberry Pi. A protected bootstrap installs exact signed application releases and restores the recorded working code/data pair if activation fails.
 
 ## Install
 
@@ -10,23 +10,26 @@ On Raspberry Pi OS, run this as your normal user with `sudo` access, `curl` and 
 curl -o- https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main/controller/scripts/install.sh | bash
 ```
 
-The installer downloads the repository archive to `~/Control-Nest-v2`, prepares the Python environment and system packages, then registers and starts the `autopihub` systemd service. The archive includes the tracked `controller/.env` configuration.
+The installer downloads the repository archive to `~/Control-Nest-v2`, prepares the Python environment and system packages, then registers and starts the `autopihub` systemd service. The tracked `controller/.env` ships only public defaults, including `OTA_RELEASE_PUBLIC_KEYS` and `OTA_JOB_PUBLIC_KEYS`. Each is a single-line JSON map from key ID to public PEM. Installation provisions these verification keys automatically and preserves an existing local `.env` when downloading into an existing directory.
 
 ## Update
 
-To download the latest controller code and restart the service:
+Bootstrap an existing trusted installation once over authenticated SSH:
 
 ```bash
-curl -o- https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main/controller/scripts/update.sh | bash
+bash scripts/bootstrap.sh
 ```
 
-The updater checks for the installed `autopihub` service first. If it is missing, the updater warns and exits; install the controller before updating. Otherwise, it downloads the latest `main` archive, updates Python dependencies and controller files, restarts the service, and checks that it is active.
+Bootstrap reads both public-key maps from `.env` and installs them in root-owned `/etc/control-nest/trusted-release-keys/` and `trusted-job-keys/`. On an existing installation, `bash scripts/provision-ota-keys.sh` provisions only those keys without replacing the application or restarting services. Bundled public PEM files support older `.env` files without these variables. The active key IDs and public fingerprints are recorded in [the key identities](../docs/ota-key-identities.json); private signing keys stay outside the repository and Pi.
+
+Then a house admin uses **Settings > Firmware updates** in mobile. Updates continue after the phone disconnects. The old source-overlay update path is disabled. Follow [OTA operations](../docs/ota-operations.md) for public-key provisioning, signed artifacts, separate environments, encrypted backup, LAN recovery grants, SSH restoration and SD replacement. Raspberry Pi OS updates remain separate owner maintenance.
 
 ## Script roles
 
 - `install.sh` downloads and installs the repository, then runs the controller setup steps.
-- `update.sh` updates the installed controller and restarts its systemd service.
-- `common.sh` contains the repository settings and shared archive download helper used by both scripts.
+- `bootstrap.sh` preserves identity/stores, moves private environment ownership to `/etc/control-nest/controller.env`, and installs the protected helper/listener.
+- `update.sh` directs admins to the signed mobile update workflow.
+- `common.sh` contains repository settings and the initial install downloader; OTA never downloads `main`.
 
 Both commands should run as the normal Pi user. The scripts use `sudo` for system package and service operations.
 
@@ -53,6 +56,6 @@ Every Pi needs a separate controller entry/key. Add multiple controllers to the 
 
 The controller uses the existing `JsonStore` service in `services/json_store.py`. Private configuration is stored at `$APP_PERSISTENT_STORAGE_PATH/stores/controller_metadata.json`, including `apiKey` and the tunnel token. `installation.json` holds the stable installation UUID. JSON writes are atomic and files use permissions `0600`. Keep the persistent storage directory across updates and protect it with the installer permissions. Mobile responses exclude these secrets. Discovery names include the installation suffix so several new Pis can be found on the same network.
 
-`API_USERNAME` and `API_PASSWORD` are no longer used. The controller still needs `SERVER_URL`, `APP_PERSISTENT_STORAGE_PATH`, and `CLERK_JWT_KEY` (Clerk public PEM verification key). Keep provider secret keys on the server.
+`API_USERNAME` and `API_PASSWORD` are no longer used and have been removed from the shipped `.env`. Public configuration consists of `SERVER_URL`, `APP_PERSISTENT_STORAGE_PATH`, `CLERK_JWT_KEY` (Clerk public PEM verification key), `OTA_RELEASE_PUBLIC_KEYS`, and `OTA_JOB_PUBLIC_KEYS`. Private signing keys and device credentials never belong in the downloadable `.env`.
 
 To replace a lost key, use **Replace key** on the website and rerun either setup method on the same Pi. Revocation blocks cloud calls and user requests to the Pi; use setup to reconnect with the new key. After updating an existing controller, generate a key for its existing entry and pair again without deleting its persistent metadata. Do not copy installation metadata to another Pi.

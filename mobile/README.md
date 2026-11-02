@@ -45,11 +45,29 @@ A house and each controller entry are created on the website. Alternatively, con
 
 **Add** always offers Room, Device, and Controller. Device creation first asks for a name and room, then a controller and free header pin. Power rating is optional. Available GPIO pins are scoped to the selected controller across all rooms.
 
-API keys are held only while submitting setup, cleared after pairing, and persisted by the Pi's `JsonStore`. The app stores public house/controller IDs, names, and hostnames. It never stores controller keys or Cloudflare tunnel tokens. Build variables remain `EXPO_PUBLIC_SERVER_URL` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` only.
+API keys are held only while submitting setup, cleared after pairing, and persisted by the Pi's `JsonStore`. The app stores public house/controller IDs, names, and hostnames. It never stores controller keys or Cloudflare tunnel tokens. OTA also uses the public `EXPO_PUBLIC_EAS_PROJECT_ID` and `EXPO_PUBLIC_OTA_POLICY_KEYS`; device-bound recovery grants are stored in SecureStore.
+
+## OTA updates
+
+**Settings > App updates** checks/downloads compatible EAS updates and offers a restart. **Settings > Firmware updates** lists every controller, its observed version, admin actions, durable job progress and LAN recovery. Home checks on entry, foreground return and pull-to-refresh. Members can follow updates; a current house admin must start an update or restore. Pending request IDs survive navigation/app termination, and uncertain delivery reuses its original idempotency key.
+
+`expo-updates` requires a new native binary once. This app is linked to [@tauqeerahmed/cnm](https://expo.dev/accounts/tauqeerahmed/projects/cnm); the project UUID and owner are recorded in `app.json`. Development, preview and production EAS channels/environments are configured with the existing public API and Clerk settings and the `release-2026-11-02` policy verification key. Local public-key configuration is in ignored `.env.local`; no signing private key belongs in mobile. `app.config.ts` manages the independent `cn-native-1` runtime; native compatibility changes need a new runtime/binary. See [OTA operations](../docs/ota-operations.md) for setup, publication, runtime backports, policy floors and rollback acceptance.
 
 ## UI verification
 
-Run `npm run lint`, `npx tsc --noEmit`, and `node --test tests/onboarding.test.mjs` from `mobile` (the tests use Node's built-in TypeScript support on Node 22.18 or later).
+Run `npm run lint`, `npx tsc --noEmit`, and `node --test tests/*.test.mjs` from `mobile` (the tests use Node's built-in TypeScript support on Node 22.18 or later).
+
+The `/` entry route waits for Clerk and the saved house selection before redirecting
+to sign-in, house selection, or Home. The splash uses the same readiness state so
+startup cannot fall through to the not-found page while restoring local settings.
+Unknown links show a safe-area-aware recovery screen with a button back to `/`.
+
+Switch-hosting screens use React Native's `ScrollView` to keep controls mounted
+through optimistic updates and form edits. The virtualized scroll wrapper's inline
+header remounts its children on each parent render, which interrupts switch motion.
+The shared switch runs its spring on the native animation driver, preserves an
+in-flight spring when the parent acknowledges a tap, and retargets on external
+changes or rollbacks. Reduce Motion uses an immediate state change.
 
 Device walkthrough:
 
