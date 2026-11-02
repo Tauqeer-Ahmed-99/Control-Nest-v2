@@ -12,6 +12,14 @@ curl -o- https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main
 
 The installer downloads the repository archive to `~/Control-Nest-v2`, prepares the Python environment and system packages, then registers and starts the `autopihub` systemd service. The tracked `controller/.env` ships only public defaults, including `OTA_RELEASE_PUBLIC_KEYS` and `OTA_JOB_PUBLIC_KEYS`. Each is a single-line JSON map from key ID to public PEM. Installation provisions these verification keys automatically and preserves an existing local `.env` when downloading into an existing directory.
 
+To install the `ota` branch, select that branch for both the installer and its repository download:
+
+```bash
+curl --fail --location --silent --show-error https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/ota/controller/scripts/install.sh | CONTROL_NEST_BRANCH=ota bash
+```
+
+Installation installs required packages without running a full OS upgrade. After installation, run the bootstrap command below to enable protected OTA updates and recovery.
+
 ## Update
 
 Bootstrap an existing trusted installation once over authenticated SSH:

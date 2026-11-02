@@ -5,9 +5,6 @@ set -e
 echo "Updating packages..."
 sudo apt-get update -y
 
-echo "Upgrading packages..."
-sudo apt-get upgrade -y
-
 echo "Installing system dependencies..."
 sudo apt-get install -y ca-certificates curl python3 python3-pip python3-venv
 

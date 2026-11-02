@@ -2,7 +2,7 @@
 
 # Shared controller repository settings and download helpers.
 CN_REPOSITORY="Tauqeer-Ahmed-99/Control-Nest-v2"
-CN_BRANCH="main"
+CN_BRANCH="${CONTROL_NEST_BRANCH:-main}"
 CN_REPOSITORY_NAME="${CN_REPOSITORY##*/}"
 CN_ARCHIVE_URL="https://github.com/${CN_REPOSITORY}/archive/refs/heads/${CN_BRANCH}.tar.gz"
 CN_INSTALL_DIR="${CONTROL_NEST_INSTALL_DIR:-${HOME}/Control-Nest-v2}"

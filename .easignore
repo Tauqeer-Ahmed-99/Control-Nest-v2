@@ -1,0 +1,36 @@
+# EAS uploads the Git repository root, including in this monorepo.
+.git
+.vercel/
+.env*
+node_modules/
+
+# Only the mobile application is needed by EAS Build.
+/controller/
+/server/
+/docs/
+/scripts/
+
+# Generated native projects are regenerated from app configuration.
+/mobile/android/
+/mobile/ios/
+.expo/
+dist/
+web-build/
+.kotlin/
+.vscode/
+coverage/
+expo-env.d.ts
+*.tsbuildinfo
+*.jks
+*.p8
+*.p12
+*.key
+*.pem
+*.mobileprovision
+*.orig.*
+.DS_Store
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.metro-health-check*
+/mobile/example/

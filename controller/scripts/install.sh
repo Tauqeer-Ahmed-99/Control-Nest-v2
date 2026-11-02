@@ -20,7 +20,7 @@ else
 
     TEMP_DIR="$(mktemp -d)"
     trap 'rm -rf "$TEMP_DIR"' EXIT
-    COMMON_URL="https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main/controller/scripts/common.sh"
+    COMMON_URL="https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/${CONTROL_NEST_BRANCH:-main}/controller/scripts/common.sh"
     curl --fail --location --silent --show-error "${COMMON_URL}" --output "${TEMP_DIR}/common.sh"
     source "${TEMP_DIR}/common.sh"
 

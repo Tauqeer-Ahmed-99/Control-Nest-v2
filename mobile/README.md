@@ -19,6 +19,16 @@ npm run android
 
 ## Build Production APK
 
+Build the signed production APK with EAS from `mobile`:
+
+```powershell
+npx eas-cli@latest build --profile production --platform android
+```
+
+EAS uses the existing linked project, remote Android signing credentials, production environment and update channel. It manages increasing Android build numbers remotely; the shared app version stays explicitly set in `app.json`. The repository-root `.easignore` excludes server/controller files, private local environment files, dependencies and generated native output so EAS regenerates the native project from configuration.
+
+For a local build instead:
+
 From the `mobile` directory, run:
 
 ```powershell
