@@ -36,8 +36,16 @@ npx tsc --noEmit
 npm run build
 ```
 
-No new environment variables are required. Provider secrets stay on the server;
-only the public API origin and Clerk publishable key belong in the mobile build.
+Every build environment must include the variables required by `src/env/vars.ts`,
+including `WEATHER_API_URL` and server-only `WEATHER_API_KEY`. Next.js evaluates
+this shared configuration while collecting API route data, so missing weather
+configuration can fail a firmware-route build as well. Both weather variables
+are provisioned in Vercel Preview; its API key is stored as a Secret. Configure
+them separately in any other Vercel environment before deploying this branch
+there. Environment changes require a new deployment to take effect.
+
+Provider secrets stay on the server; only the public API origin, Clerk
+publishable key and OTA verification configuration belong in the mobile build.
 The public guide contains no server deployment or credential configuration steps.
 Server environment and database instructions below are for service maintainers.
 
