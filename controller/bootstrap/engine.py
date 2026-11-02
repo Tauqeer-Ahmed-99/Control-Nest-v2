@@ -279,7 +279,7 @@ class Engine:
                     raise MaintenanceError("DOWNLOAD_FAILED") from None
 
     def service(self, action):
-        if action == "start":
+        if action == "start" and subprocess.run(["systemctl", "is-failed", "--quiet", "autopihub-app.service"], capture_output=True, timeout=10).returncode == 0:
             subprocess.run(["systemctl", "reset-failed", "autopihub-app.service"], check=True, capture_output=True, timeout=10)
         subprocess.run(["systemctl", action, "autopihub-app.service"], check=True, capture_output=True, timeout=45)
 
