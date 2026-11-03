@@ -7,6 +7,8 @@ Built by NMT Solutions OPC Pvt Ltd.
 
 The repository root is linked to the existing [control-nest-v2 Vercel project](https://vercel.com/tauqeerahmed99s-projects/control-nest-v2). Its Vercel Root Directory is `server`; run Vercel CLI commands from the repository root. The existing production API origin is `https://controlnest-v2.nmt-solutions.in`. Local `.vercel` metadata and generated environment files are ignored by Git.
 
+The `ota` branch API origin is `https://control-nest-v2-git-ota-tauqeerahmed99s-projects.vercel.app`. This branch domain has a Vercel Deployment Protection Exception for mobile/controller access; protected API routes retain their application authentication and authorization. Use the stable branch domain in preview mobile configuration so it follows new `ota` deployments. Deployment URLs for other previews retain their existing protection.
+
 ## Website
 
 - `/` introduces the app with an interactive sample home, AutoPiHub overview,

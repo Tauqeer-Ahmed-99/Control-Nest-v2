@@ -10,15 +10,19 @@
       "channel": "development",
       "environment": "development",
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_PUBLIC_SERVER_URL": "https://control-nest-v2-git-ota-tauqeerahmed99s-projects.vercel.app"
       }
     },
     "preview": {
+      "developmentClient": false,
       "distribution": "internal",
       "channel": "preview",
       "environment": "preview",
+      "autoIncrement": true,
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_PUBLIC_SERVER_URL": "https://control-nest-v2-git-ota-tauqeerahmed99s-projects.vercel.app"
       },
       "android": { "buildType": "apk" }
     },
@@ -26,7 +30,8 @@
       "channel": "production",
       "environment": "production",
       "env": {
-        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true",
+        "EXPO_PUBLIC_SERVER_URL": "https://controlnest-v2.nmt-solutions.in"
       },
       "autoIncrement": true,
       "android": {

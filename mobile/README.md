@@ -24,6 +24,33 @@ npx expo prebuild --platform android
 npm run android
 ```
 
+## Build Preview APK
+
+From `mobile`, build the release APK for the `ota` preview server:
+
+```powershell
+npx eas-cli@latest build --profile preview --platform android
+```
+
+The preview profile uses the EAS `preview` environment and update channel, the
+existing Android package/signing identity, and an increasing Android build number.
+It runs the normal application with real controller actions. LAN discovery,
+pairing and device requests still use the selected Pi's address or tunnel.
+The cloud API origin is
+`https://control-nest-v2-git-ota-tauqeerahmed99s-projects.vercel.app`.
+
+Development uses the same preview API; the production profile uses
+`https://controlnest-v2.nmt-solutions.in`. Each profile pins its public server URL
+in `eas.json`, matching the corresponding EAS environment. The `ota` branch's
+local mobile `.env` also uses the preview API. EAS project ID, Clerk publishable
+key and release-policy public keys are provisioned in all three environments.
+These public settings are bundled into the app, so changing them requires a new
+build or compatible OTA update on the installed app's channel.
+
+The Vercel `ota` branch domain has a Deployment Protection Exception so the app
+receives API JSON. Protected API routes still enforce Clerk and house/controller
+authorization. Vercel bypass credentials belong only in maintainer tooling.
+
 ## Build Production APK
 
 Build the signed production APK with EAS from `mobile`:

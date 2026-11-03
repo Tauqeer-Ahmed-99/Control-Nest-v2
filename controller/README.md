@@ -2,6 +2,8 @@
 
 The controller is a Python FastAPI service for the Control Nest Raspberry Pi. A protected bootstrap installs exact signed application releases and restores the recorded working code/data pair if activation fails.
 
+The controller always runs its normal installed services. Selecting a different source branch changes the code, while identity, persistent stores, authorization, scheduling and GPIO operations retain their normal behavior. Mobile preview APKs use the same real LAN/tunnel controller interfaces as production APKs.
+
 ## Install
 
 On Raspberry Pi OS, run this as your normal user with `sudo` access, `curl` and `tar` installed, and an internet connection:
