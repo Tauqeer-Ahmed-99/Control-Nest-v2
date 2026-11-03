@@ -11,14 +11,29 @@ import { authorizeHouseByControllerDevice } from "./auth-house";
 import tryCatch from "@/utils/try-catch";
 import { HealthData } from "@/models/contoller-device";
 import { getRequestId, measureRequestTiming } from "./observability-context";
+import { headers as requestHeaders } from "next/headers";
+import { enforceControllerCompatibility } from "./firmware";
 
-const controllerRequestHeaders = (accessToken: string) => {
+const controllerRequestHeaders = async (accessToken: string) => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
     authorization: `Bearer ${accessToken}`,
   };
   const requestId = getRequestId();
   if (requestId) headers["X-Request-ID"] = requestId;
+  const incoming = await requestHeaders();
+  for (const key of [
+    "x-mobile-release",
+    "x-mobile-binary-version",
+    "x-mobile-build",
+    "x-mobile-runtime",
+    "x-mobile-update-id",
+    "x-mobile-platform",
+    "x-controller-contract",
+  ]) {
+    const value = incoming.get(key);
+    if (value) headers[key] = value;
+  }
   return headers;
 };
 
@@ -210,7 +225,7 @@ export const checkControllerDeviceHealth = async ({
   const url = await getControllerDeviceUrlById(controllerDeviceId);
 
   const response = await fetch(url, {
-    headers: controllerRequestHeaders(accessToken),
+    headers: await controllerRequestHeaders(accessToken),
   });
 
   const { success, message, data }: APIResponse<HealthData> =
@@ -236,6 +251,7 @@ export const createPhysicalDevice = async (
   device: Device,
   accessToken: string,
 ) => {
+  await enforceControllerCompatibility(device.controllerDeviceId);
   const url = await getControllerDeviceUrlByDeviceId(device.id, txn);
 
   const body = JSON.stringify(device);
@@ -243,13 +259,23 @@ export const createPhysicalDevice = async (
   const response = await fetch(`${url}/device`, {
     method: "POST",
     body,
-    headers: controllerRequestHeaders(accessToken),
+    headers: await controllerRequestHeaders(accessToken),
   });
 
-  const { success, message }: APIResponse = await response.json();
+  const { success, message, errors }: APIResponse = await response.json();
 
   if (!success) {
-    throw new APIError({ message });
+    throw new APIError({
+      message,
+      errors,
+      statusCode:
+        errors &&
+        typeof errors === "object" &&
+        "code" in errors &&
+        errors.code === "UPDATE_REQUIRED"
+          ? 426
+          : 500,
+    });
   }
 };
 
@@ -258,18 +284,29 @@ export const updatePhysicalDevice = async (
   device: Device,
   accessToken: string,
 ) => {
+  await enforceControllerCompatibility(device.controllerDeviceId);
   const url = await getControllerDeviceUrlByDeviceId(device.id, txn);
 
   const response = await fetch(`${url}/device`, {
     method: "PUT",
     body: JSON.stringify(device),
-    headers: controllerRequestHeaders(accessToken),
+    headers: await controllerRequestHeaders(accessToken),
   });
 
-  const { success, message }: APIResponse = await response.json();
+  const { success, message, errors }: APIResponse = await response.json();
 
   if (!success) {
-    throw new APIError({ message });
+    throw new APIError({
+      message,
+      errors,
+      statusCode:
+        errors &&
+        typeof errors === "object" &&
+        "code" in errors &&
+        errors.code === "UPDATE_REQUIRED"
+          ? 426
+          : 500,
+    });
   }
 };
 
@@ -289,16 +326,19 @@ export const removePhysicalDevice = async (
     ]);
   }
   for (const [controllerId, ids] of groups) {
+    await enforceControllerCompatibility(controllerId);
     const url = await getControllerDeviceUrlById(controllerId);
     const response = await fetch(`${url}/device`, {
       method: "DELETE",
       body: JSON.stringify({ deviceIds: ids }),
-      headers: controllerRequestHeaders(accessToken),
+      headers: await controllerRequestHeaders(accessToken),
     });
     const result: APIResponse = await response.json();
     if (!response.ok || !result.success)
       throw new APIError({
         message: "Unable to remove devices from controller.",
+        errors: result.errors,
+        statusCode: response.status,
       });
   }
 };
@@ -308,19 +348,34 @@ export const switchPhysicalDevice = async (
   device: { deviceId: string; status: boolean; userId: string },
   accessToken: string,
 ) => {
-  const { success, message }: APIResponse = await measureRequestTiming(
+  const assigned = await database.query.devices.findFirst({
+    where: { id: device.deviceId },
+  });
+  if (assigned)
+    await enforceControllerCompatibility(assigned.controllerDeviceId);
+  const { success, message, errors }: APIResponse = await measureRequestTiming(
     "controller-request",
     async () => {
       const response = await fetch(`${controllerUrl}/device/switch`, {
         method: "POST",
         body: JSON.stringify(device),
-        headers: controllerRequestHeaders(accessToken),
+        headers: await controllerRequestHeaders(accessToken),
       });
       return response.json();
     },
   );
 
   if (!success) {
-    throw new APIError({ message });
+    throw new APIError({
+      message,
+      errors,
+      statusCode:
+        errors &&
+        typeof errors === "object" &&
+        "code" in errors &&
+        errors.code === "UPDATE_REQUIRED"
+          ? 426
+          : 500,
+    });
   }
 };

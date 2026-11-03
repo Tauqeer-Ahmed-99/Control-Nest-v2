@@ -1,5 +1,12 @@
 # Control Nest Mobile
 
+## Install dependencies
+
+Run `npm ci` from `mobile`. The committed `.npmrc` enables `legacy-peer-deps`
+for local installs. Each build profile in `eas.json` also sets
+`NPM_CONFIG_LEGACY_PEER_DEPS=true` for EAS Build's `npm ci --include=dev`, avoiding
+the current React peer dependency conflict in `@rneui/base`'s testing dependencies.
+
 ## Run Android Development Build
 
 From the `mobile` directory, run:
@@ -17,7 +24,45 @@ npx expo prebuild --platform android
 npm run android
 ```
 
+## Build Preview APK
+
+From `mobile`, build the release APK for the `ota` preview server:
+
+```powershell
+npx eas-cli@latest build --profile preview --platform android
+```
+
+The preview profile uses the EAS `preview` environment and update channel, the
+existing Android package/signing identity, and an increasing Android build number.
+It runs the normal application with real controller actions. LAN discovery,
+pairing and device requests still use the selected Pi's address or tunnel.
+The cloud API origin is
+`https://control-nest-v2-git-ota-tauqeerahmed99s-projects.vercel.app`.
+
+Development uses the same preview API; the production profile uses
+`https://controlnest-v2.nmt-solutions.in`. Each profile pins its public server URL
+in `eas.json`, matching the corresponding EAS environment. The tracked local
+mobile `.env` defaults to production; use ignored `.env.local` to select the
+preview API for local development. EAS project ID, Clerk publishable
+key and release-policy public keys are provisioned in all three environments.
+These public settings are bundled into the app, so changing them requires a new
+build or compatible OTA update on the installed app's channel.
+
+The Vercel `ota` branch domain has a Deployment Protection Exception so the app
+receives API JSON. Protected API routes still enforce Clerk and house/controller
+authorization. Vercel bypass credentials belong only in maintainer tooling.
+
 ## Build Production APK
+
+Build the signed production APK with EAS from `mobile`:
+
+```powershell
+npx eas-cli@latest build --profile production --platform android
+```
+
+EAS uses the existing linked project, remote Android signing credentials, production environment and update channel. It manages increasing Android build numbers remotely; the shared app version stays explicitly set in `app.json`. The repository-root `.easignore` excludes server/controller files, private local environment files, dependencies and generated native output so EAS regenerates the native project from configuration.
+
+For a local build instead:
 
 From the `mobile` directory, run:
 
@@ -45,11 +90,29 @@ A house and each controller entry are created on the website. Alternatively, con
 
 **Add** always offers Room, Device, and Controller. Device creation first asks for a name and room, then a controller and free header pin. Power rating is optional. Available GPIO pins are scoped to the selected controller across all rooms.
 
-API keys are held only while submitting setup, cleared after pairing, and persisted by the Pi's `JsonStore`. The app stores public house/controller IDs, names, and hostnames. It never stores controller keys or Cloudflare tunnel tokens. Build variables remain `EXPO_PUBLIC_SERVER_URL` and `EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY` only.
+API keys are held only while submitting setup, cleared after pairing, and persisted by the Pi's `JsonStore`. The app stores public house/controller IDs, names, and hostnames. It never stores controller keys or Cloudflare tunnel tokens. OTA also uses the public `EXPO_PUBLIC_EAS_PROJECT_ID` and `EXPO_PUBLIC_OTA_POLICY_KEYS`; device-bound recovery grants are stored in SecureStore.
+
+## OTA updates
+
+**Settings > App updates** checks/downloads compatible EAS updates and offers a restart. **Settings > Firmware updates** lists every controller, its observed version, admin actions, durable job progress and LAN recovery. Home checks on entry, foreground return and pull-to-refresh. Members can follow updates; a current house admin must start an update or restore. Pending request IDs survive navigation/app termination, and uncertain delivery reuses its original idempotency key.
+
+`expo-updates` requires a new native binary once. This app is linked to [@tauqeerahmed/cnm](https://expo.dev/accounts/tauqeerahmed/projects/cnm); the project UUID and owner are recorded in `app.json`. Development, preview and production EAS channels/environments are configured with the existing public API and Clerk settings and the `release-2026-11-02` policy verification key. Local public-key configuration is in ignored `.env.local`; no signing private key belongs in mobile. `app.config.ts` manages the independent `cn-native-1` runtime; native compatibility changes need a new runtime/binary. See [OTA operations](../docs/ota-operations.md) for setup, publication, runtime backports, policy floors and rollback acceptance.
 
 ## UI verification
 
-Run `npm run lint`, `npx tsc --noEmit`, and `node --test tests/onboarding.test.mjs` from `mobile` (the tests use Node's built-in TypeScript support on Node 22.18 or later).
+Run `npm run lint` and `npx tsc --noEmit` from `mobile`, then follow the real-device walkthrough below.
+
+The `/` entry route waits for Clerk and the saved house selection before redirecting
+to sign-in, house selection, or Home. The splash uses the same readiness state so
+startup cannot fall through to the not-found page while restoring local settings.
+Unknown links show a safe-area-aware recovery screen with a button back to `/`.
+
+Switch-hosting screens use React Native's `ScrollView` to keep controls mounted
+through optimistic updates and form edits. The virtualized scroll wrapper's inline
+header remounts its children on each parent render, which interrupts switch motion.
+The shared switch runs its spring on the native animation driver, preserves an
+in-flight spring when the parent acknowledges a tap, and retargets on external
+changes or rollbacks. Reduce Motion uses an immediate state change.
 
 Device walkthrough:
 

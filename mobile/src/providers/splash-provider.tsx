@@ -1,6 +1,6 @@
 import AppIcon from "@/assets/icon/icon.png";
 import NMTLogo from "@/assets/svgs/nmt-logo.svg";
-import { useAuth } from "@clerk/expo";
+import useAppEntry from "@/hooks/use-app-entry";
 import { Text, useTheme } from "@rneui/themed";
 import Constants from "expo-constants";
 import { SplashScreen } from "expo-router";
@@ -12,7 +12,7 @@ const SplashProvider = ({
   isFontsLoaded,
   children,
 }: { isFontsLoaded: boolean } & PropsWithChildren) => {
-  const { isLoaded: isAuthLoaded } = useAuth();
+  const { isReady: isEntryReady } = useAppEntry();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const { primary } = theme.colors;
@@ -21,7 +21,7 @@ const SplashProvider = ({
     useState(false);
   const version = Constants.expoConfig?.version ?? "1.0.0";
   const isAppReady =
-    isFontsLoaded && isAuthLoaded && minimumSplashTimeElapsed;
+    isFontsLoaded && isEntryReady && minimumSplashTimeElapsed;
 
   useEffect(() => {
     if (isAppReady) {

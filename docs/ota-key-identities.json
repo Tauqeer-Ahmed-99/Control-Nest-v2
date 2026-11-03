@@ -1,0 +1,17 @@
+{
+  "algorithm": "Ed25519",
+  "createdAt": "2026-11-02T15:06:35.650Z",
+  "release": {
+    "keyId": "release-2026-11-02",
+    "spkiSha256": "02ac063c6e3f17436773013af073d3763151fd6fd6b4fb8fdb0db5b47641b482",
+    "publicKeyFile": "controller/bootstrap/trusted-release-keys/release-2026-11-02.pem",
+    "environmentVariable": "OTA_RELEASE_PUBLIC_KEYS"
+  },
+  "jobs": {
+    "keyId": "jobs-2026-11-02",
+    "spkiSha256": "44621de4d5d9642c9846cad44cb599572a81127f3f0383a6b156ed3ae076af3c",
+    "publicKeyFile": "controller/bootstrap/trusted-job-keys/jobs-2026-11-02.pem",
+    "environmentVariable": "OTA_JOB_PUBLIC_KEYS"
+  },
+  "controllerEnvironmentFile": "controller/.env"
+}

@@ -5,6 +5,10 @@ This Next.js project serves the Control Nest website and the existing
 Control Nest is the mobile app; AutoPiHub is the Raspberry Pi controller service.
 Built by NMT Solutions OPC Pvt Ltd.
 
+The repository root is linked to the existing [control-nest-v2 Vercel project](https://vercel.com/tauqeerahmed99s-projects/control-nest-v2). Its Vercel Root Directory is `server`; run Vercel CLI commands from the repository root. The existing production API origin is `https://controlnest-v2.nmt-solutions.in`. Local `.vercel` metadata and generated environment files are ignored by Git.
+
+The `ota` branch API origin is `https://control-nest-v2-git-ota-tauqeerahmed99s-projects.vercel.app`. This branch domain has a Vercel Deployment Protection Exception for mobile/controller access; protected API routes retain their application authentication and authorization. Use the stable branch domain in preview mobile configuration so it follows new `ota` deployments. Deployment URLs for other previews retain their existing protection.
+
 ## Website
 
 - `/` introduces the app with an interactive sample home, AutoPiHub overview,
@@ -34,10 +38,26 @@ npx tsc --noEmit
 npm run build
 ```
 
-No new environment variables are required. Provider secrets stay on the server;
-only the public API origin and Clerk publishable key belong in the mobile build.
+Every build environment must include the variables required by `src/env/vars.ts`,
+including `WEATHER_API_URL` and server-only `WEATHER_API_KEY`. Next.js evaluates
+this shared configuration while collecting API route data, so missing weather
+configuration can fail a firmware-route build as well. Both weather variables
+are provisioned in Vercel Preview; its API key is stored as a Secret. Configure
+them separately in any other Vercel environment before deploying this branch
+there. Environment changes require a new deployment to take effect.
+
+Provider secrets stay on the server; only the public API origin, Clerk
+publishable key and OTA verification configuration belong in the mobile build.
 The public guide contains no server deployment or credential configuration steps.
 Server environment and database instructions below are for service maintainers.
+
+## OTA releases and policy
+
+From `server`, run `npm run db-push` against the database selected by `DB_ENV` before deploying OTA support. Review the proposed changes first with `npm run db-push -- --explain`; pushing applies the declarative schema directly without generating migration files. The four OTA tables, three foreign keys and two indexes were applied this way on 2026-11-02. Configure server-only `OTA_JOB_KEY_ID`, `OTA_JOB_PRIVATE_KEY`, and the public PEM map `OTA_RELEASE_PUBLIC_KEYS` in private server configuration. No private signing key belongs on mobile or a controller. The catalog is empty and no upgrade floor is active until a maintainer registers verified published artifacts and a signed policy.
+
+`npm run ota:catalog -- register <catalog.json>`, `policy <signed-policy.json> [--controllers <private-rollout.json>]`, and `revoke <version>` manage publication eligibility separately from installation. Raising a minimum requires `--activate-minimums`. Public discovery omits rollout controller IDs. New-job/rollback/recovery issuance requires a current active house admin; ordered events require the paired controller's own API key/installation identity. See [OTA operations](../docs/ota-operations.md) for key rotation, rollout, migration, native build requirements, artifact generation and recovery.
+
+Signing configuration is provisioned in the linked Vercel project's development, preview and production environments: job key `jobs-2026-11-02` is a Secret; its ID and the public release-key map are Config values. The release signer stays outside Vercel. See [public key identities](../docs/ota-key-identities.json) for fingerprints. Existing deployments need a subsequent deployment to receive these environment values.
 
 ## Styling, components, and brand assets
 
@@ -126,10 +146,12 @@ Apply `src/database/migrations/add-controller-api-keys.sql` to an existing datab
 
 House admins generate one key per controller at My houses. Keys contain 256 random bits, are shown once, and are hashed with SHA-256 in PostgreSQL. The last four characters are safe to show in the UI. Replace key immediately invalidates the old key while retaining the Pi's installation binding; paste the replacement on that same Pi. Revoke blocks controller requests until a replacement is installed. Add another controller entry to connect another Pi.
 
-Retire `CONTROLLER_USERNAME` and `CONTROLLER_PASSWORD`. No new shared secret environment variables are needed. The server continues to own Cloudflare, database, weather, and Clerk secrets. The Pi owns its generated API key and tunnel token. The mobile app receives only house/controller names, IDs, and public hostnames.
+Cloudflare ingress configuration uses a bare DNS hostname and routes the controller tunnel to `http://127.0.0.1:8000`, the stable Pi listener. The connection details returned to mobile retain their `https://` URL. An ingress hostname containing `https://` is rejected by Cloudflare and prevents pairing before the Pi saves its configuration.
+
+Retire `CONTROLLER_USERNAME` and `CONTROLLER_PASSWORD`. Controller provisioning uses per-device keys; OTA adds the separate signing configuration described above. The server continues to own Cloudflare, database, weather, Clerk and job-signing secrets. The Pi owns its generated API key and tunnel token. Mobile receives public connection details and narrowly scoped recovery authorizations.
 
 Management APIs: `GET /api/v1/houses`, `POST /api/v1/house`, and `GET/POST/PATCH /api/v1/house/controllers`. Controllers enroll with `POST /api/v1/controller-device/init`; all subsequent controller calls use `Authorization: Bearer <controller-api-key>` and `X-Controller-Installation-ID`. Request bodies and query strings cannot override the identity derived from the key. Device fetches and control logs are restricted to that controller's explicitly assigned devices. The `/controller-device/access` endpoint verifies a user session against the controller's house for inbound Pi requests, including public tunnel access.
 
 Deploy the API/schema, mobile app, and controller update together: the retired shared credentials and password-based setup are intentionally not accepted. Existing houses/memberships are retained. Generate keys for existing controller entries before pairing again.
 
-Run the controller security regression suite with `node --test tests/controller-security.test.mjs` from `server/`. It uses the real services and routes with isolated database/provider adapters; it does not provision cloud resources. Controller persistence tests run with `python -m unittest discover -s controller/tests -v` from the repository root and replace hardware/network adapters. Live Clerk, PostgreSQL migration, Cloudflare, LAN discovery, and GPIO verification require the deployment and a Pi.
+Run `npm run lint` and `npx tsc --noEmit` from `server/`; the Vercel deployment validates the production build. Verify Clerk authentication, house membership, controller pairing and Cloudflare provisioning against the deployment. Follow the manual update and recovery acceptance checks in [OTA operations](../docs/ota-operations.md) on a representative Pi before enabling controller release availability.

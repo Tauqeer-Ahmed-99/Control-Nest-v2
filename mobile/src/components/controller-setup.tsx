@@ -1,4 +1,5 @@
 import { inspectControllerKey } from "@/utils/onboarding";
+import { ApiError } from "@/utils/api-error";
 import { SERVER_URL } from "@/constants/urls";
 import { useAutoPiDiscovery } from "@/hooks/use-autopi-discovery";
 import useConfigController from "@/hooks/use-config-controller";
@@ -112,9 +113,11 @@ export default function ControllerSetup({
       }
       setApiKey("");
       setConnected(result.data);
-    } catch {
+    } catch (error) {
       setError(
-        "Couldn't connect. Check the API key, Pi, and Wi-Fi, then try again.",
+        error instanceof ApiError
+          ? error.message
+          : "Couldn't connect. Check the API key, Pi, and Wi-Fi, then try again.",
       );
     } finally {
       pairing.reset();

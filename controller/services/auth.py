@@ -34,6 +34,10 @@ def require_auth(
         Depends(security),
     ] = None,
 ) -> tuple[str, str]:
+    if request.url.path.startswith("/internal/maintenance/"):
+        from services.maintenance import internal
+        internal(request)
+        return "maintenance", ""
     state = authenticate_request(
         request,
         AuthenticateRequestOptions(

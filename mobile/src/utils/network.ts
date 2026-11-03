@@ -1,6 +1,9 @@
 import * as Crypto from "expo-crypto";
+import { releaseMetadata } from "@/constants/release";
+import type { Query, UseQueryOptions } from "@tanstack/react-query";
 
 export interface ApiConfig<T = unknown> {
+  publicRequest?: boolean;
   baseUrl?: string;
   searchParams?: { [key: string]: any };
   body?: BodyInit;
@@ -9,9 +12,9 @@ export interface ApiConfig<T = unknown> {
   queryConfig?: {
     enabled?: boolean;
     staleTime?: number;
-    placeholderData?:
-      | T
-      | ((previousData: T | undefined) => T | undefined);
+    placeholderData?: UseQueryOptions<T, Error>["placeholderData"];
+    refetchInterval?:
+      number | false | ((query: Query<T, Error>) => number | false);
   };
 }
 
@@ -62,6 +65,16 @@ const request = <T = unknown>(
 
   const requestHeaders = new Headers({ "Content-Type": "application/json" });
   new Headers(headers).forEach((value, key) => requestHeaders.set(key, value));
+  requestHeaders.set("X-Mobile-Release", releaseMetadata.release);
+  requestHeaders.set("X-Mobile-Binary-Version", releaseMetadata.binaryVersion);
+  requestHeaders.set("X-Mobile-Build", releaseMetadata.build);
+  requestHeaders.set("X-Mobile-Runtime", releaseMetadata.runtime);
+  requestHeaders.set("X-Mobile-Update-ID", releaseMetadata.updateId);
+  requestHeaders.set("X-Mobile-Platform", releaseMetadata.platform);
+  requestHeaders.set(
+    "X-Controller-Contract",
+    String(releaseMetadata.apiContract),
+  );
   if (!requestHeaders.has("X-Request-ID")) {
     requestHeaders.set("X-Request-ID", Crypto.randomUUID());
   }
@@ -69,6 +82,7 @@ const request = <T = unknown>(
   return fetch(fullUrl.toString(), {
     method,
     headers: requestHeaders,
+    signal: AbortSignal.timeout(25000),
     ...(body !== undefined && method !== HTTPMethod.GET
       ? { body: JSON.stringify(body) }
       : {}),

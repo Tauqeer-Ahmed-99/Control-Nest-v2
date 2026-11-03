@@ -8,8 +8,7 @@ import useHouse from "@/hooks/use-house";
 import { getTypedRoute, Routes } from "@/routes/routes";
 import { useTheme } from "@rneui/themed";
 import { router } from "expo-router";
-import { View } from "react-native";
-import { ScrollView } from "react-native-virtualized-view";
+import { ScrollView, View } from "react-native";
 
 const Devices = () => {
   const { theme } = useTheme();

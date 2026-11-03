@@ -20,7 +20,7 @@ else
 
     TEMP_DIR="$(mktemp -d)"
     trap 'rm -rf "$TEMP_DIR"' EXIT
-    COMMON_URL="https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/main/controller/scripts/common.sh"
+    COMMON_URL="https://raw.githubusercontent.com/Tauqeer-Ahmed-99/Control-Nest-v2/${CONTROL_NEST_BRANCH:-main}/controller/scripts/common.sh"
     curl --fail --location --silent --show-error "${COMMON_URL}" --output "${TEMP_DIR}/common.sh"
     source "${TEMP_DIR}/common.sh"
 
@@ -31,7 +31,13 @@ else
     fi
 
     mkdir -p "${CN_INSTALL_DIR}"
+    if [[ -f "${CN_INSTALL_DIR}/controller/.env" ]]; then
+        cp -p -- "${CN_INSTALL_DIR}/controller/.env" "${TEMP_DIR}/existing-controller.env"
+    fi
     cp -a "${CN_SOURCE_DIR}/." "${CN_INSTALL_DIR}/"
+    if [[ -f "${TEMP_DIR}/existing-controller.env" ]]; then
+        cp -p -- "${TEMP_DIR}/existing-controller.env" "${CN_INSTALL_DIR}/controller/.env"
+    fi
 
     echo "Repository downloaded to ${CN_INSTALL_DIR}. Starting controller installation..."
     bash "${CN_INSTALL_DIR}/controller/scripts/install.sh"
@@ -48,7 +54,7 @@ if [[ ! -f .env ]]; then
     exit 1
 fi
 
-for script in clock.sh packages.sh stores.sh cloudflared.sh service.sh; do
+for script in clock.sh packages.sh stores.sh cloudflared.sh provision-ota-keys.sh service.sh; do
     chmod +x "scripts/${script}"
     "scripts/${script}"
 done

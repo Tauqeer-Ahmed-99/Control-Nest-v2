@@ -8,6 +8,7 @@ import {
 } from "./controller-credentials";
 import { APIError } from "@/models/api";
 import tryCatch from "@/utils/try-catch";
+import { enforceMobileCompatibility } from "./firmware";
 import {
   measureRequestTiming,
   setObservabilityUserId,
@@ -64,6 +65,8 @@ export const authenticate = async (payload: Request | TokenString) => {
   }
 
   setObservabilityUserId(user.id);
+
+  if (typeof payload !== "string") await enforceMobileCompatibility(payload);
 
   return { user, token };
 };

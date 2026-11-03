@@ -44,26 +44,34 @@ const Switch: React.FC<SwitchProps> = ({
           stiffness: 300,
           damping: 32,
           mass: 1,
-          useNativeDriver: false,
+          useNativeDriver: true,
+          isInteraction: false,
+          overshootClamping: true,
         }).start();
     },
     [animationValue, reduceMotion],
   );
 
   useEffect(() => {
+    if (!reduceMotion && isOnRef.current === value) return;
+
     isOnRef.current = value;
-    // An optimistic prop update acknowledges the tap; it must not snap the
-    // thumb to its destination before its spring has finished.
+    // A tap already started the spring. Only a different external value (such
+    // as rollback) should retarget it; an acknowledgement must not restart it.
     animateTo(value);
-  }, [animateTo, value]);
+  }, [animateTo, reduceMotion, value]);
+
+  useEffect(() => () => animationValue.stopAnimation(), [animationValue]);
 
   const toggleSwitch = useCallback(() => {
+    if (disabled) return;
+
     const next = !isOnRef.current;
     isOnRef.current = next;
 
     animateTo(next);
     onChange(next);
-  }, [animateTo, onChange]);
+  }, [animateTo, disabled, onChange]);
 
   const switchColor = animationValue.interpolate({
     inputRange: [0, 1],

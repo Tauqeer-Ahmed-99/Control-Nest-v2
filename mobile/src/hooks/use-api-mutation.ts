@@ -7,6 +7,7 @@ import {
   useMutation,
 } from "@tanstack/react-query";
 import useRemoteUrl from "./use-remote-url";
+import { ApiError } from "@/utils/api-error";
 
 const useApiMutation = <R = unknown, T = unknown, C = unknown>(
   url: string,
@@ -19,7 +20,7 @@ const useApiMutation = <R = unknown, T = unknown, C = unknown>(
   return useMutation({
     mutationKey: [url],
     mutationFn: async (body: R) => {
-      const token = await getToken();
+      const token = config?.publicRequest ? null : await getToken();
       const headers: Record<string, string> = {
         "Content-Type": "application/json",
         ...(config?.headers as Record<string, string> | undefined),
@@ -37,7 +38,11 @@ const useApiMutation = <R = unknown, T = unknown, C = unknown>(
 
       if (!response.ok) {
         const parsedRes: APIResponse = await response.json();
-        throw new Error(response.status + " : " + parsedRes.message);
+        throw new ApiError(
+          response.status + " : " + parsedRes.message,
+          response.status,
+          parsedRes.errors,
+        );
       }
 
       return response.json();

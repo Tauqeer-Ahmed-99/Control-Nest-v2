@@ -1,4 +1,5 @@
 import subprocess
+import os
 
 from models.api import APIError
 
@@ -6,6 +7,18 @@ from models.api import APIError
 class CloudflaredService:
 
     def initialize_cloudflared_tunnel(self, tunnel_token: str):
+        if os.environ.get("CONTROL_NEST_SUPERVISED") == "1":
+            import json
+            import socket
+            with socket.socket(socket.AF_UNIX) as connection:
+                connection.settimeout(40)
+                connection.connect("/run/control-nest/maintenance.sock")
+                connection.sendall(b'{"action":"tunnel"}\n')
+                with connection.makefile("rb") as stream:
+                    result = json.loads(stream.readline(8192))
+            if result.get("status") != 200:
+                raise APIError(message="Unable to configure the protected tunnel service.")
+            return
         existing = subprocess.run(["systemctl", "cat", "cloudflared.service"], capture_output=True, check=False)
         if existing.returncode == 0:
             self.uninstall_cloudflared_service()

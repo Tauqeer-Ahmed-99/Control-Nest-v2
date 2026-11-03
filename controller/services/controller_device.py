@@ -1,6 +1,8 @@
 from typing import List
 from gpiozero import OutputDevice
 import asyncio
+import os
+from services.json_store import JsonStore
 
 import RPi.GPIO as GPIO
 
@@ -19,6 +21,7 @@ class ControllerDevice:
 
     def __init__(self, controller_config_service: ControllerConfigService,api_service: APIService):
         self.devices = []
+        self._device_records = {}
         self.controller_config_service = controller_config_service
         self.api_service = api_service
         # self.initialize() # DONOT INITIALIZE IT HERE, Already initialized in server.py @asynccontextmanager lifespan function
@@ -37,13 +40,28 @@ class ControllerDevice:
             controller_device_id = self.controller_config_service.get("controllerDevice", "id")
             if controller_device_id is not None:
                 self.controller_device_id = controller_device_id
-                controller_device_data = self.api_service.get_controller_device_data(controller_device_id)
+                cached = JsonStore.read_file("devices")
+                if os.environ.get("CONTROL_NEST_SUPERVISED") == "1" and cached.get("controllerDeviceId") == controller_device_id:
+                    records = [DeviceResponse.model_validate(item) for item in cached.get("devices", [])]
+                else:
+                    records = self.api_service.get_controller_device_data(controller_device_id).devices
                 self.devices = []
-                for device in controller_device_data.devices:
+                self._device_records = {}
+                for device in records:
                     self.devices.append(Device(device))
+                    self._device_records[device.id] = device.model_dump(mode="json")
+                self.save_local_devices()
+
+    def save_local_devices(self):
+        for device in self.devices:
+            if device.id in self._device_records:
+                self._device_records[device.id]["status"] = device.status
+        if not JsonStore.write_file("devices", {"controllerDeviceId": self.controller_device_id, "devices": list(self._device_records.values())}):
+            raise RuntimeError("Unable to persist controller devices")
 
     def release_all_rpi_gpio_resources(self):
-        GPIO.cleanup()
+        if os.environ.get("CONTROL_NEST_SUPERVISED") != "1":
+            GPIO.cleanup()
         GPIO.setmode(GPIO.BCM)
 
     def initialize_output_devices(self):
@@ -51,8 +69,12 @@ class ControllerDevice:
             for device in self.devices:
                 device.output_device = OutputDevice(
                     device.gpio_pin_number,
-                    active_high=False
+                    active_high=False,
+                    initial_value=None if os.environ.get("CONTROL_NEST_SUPERVISED") == "1" else False,
                 )
+                if os.environ.get("CONTROL_NEST_SUPERVISED") == "1":
+                    device.status = bool(device.output_device.value)
+                    continue
                 if device.status:
                     device.output_device.on()
                 else:
@@ -69,7 +91,16 @@ class ControllerDevice:
             device.gpio_pin_number,
             active_high=False
         )
+        if device.status:
+            if device.output_device is not None:
+                device.output_device.on()
+        else:
+            if device.output_device is not None:
+                device.output_device.off()
+
         self.devices.append(device)
+        self._device_records[device_res.id] = device_res.model_dump(mode="json")
+        self.save_local_devices()
 
     def get_device(self, id: str):
         try:
@@ -102,6 +133,7 @@ class ControllerDevice:
                     status_from = device.status
                     status_to = status
                     device.status = status
+                    self.save_local_devices()
                     if self.controller_device_id is not None and status_from != status_to:
                         asyncio.create_task(
                             self.api_service.create_device_control_log(
@@ -132,6 +164,8 @@ class ControllerDevice:
             if output_device is not None:
                 output_device.close()
             self.devices.remove(device)
+            self._device_records.pop(device_id, None)
+            self.save_local_devices()
 
     def remove_multiple_devices(self, device_ids: list[str]):
         for device_id in device_ids:

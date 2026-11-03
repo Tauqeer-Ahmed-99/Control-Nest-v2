@@ -63,11 +63,11 @@ class ControllerConfigService:
     def save_controller_config(self, content: dict) -> bool:
         return JsonStore.write_file(CONTROLLER_STORE_FILE_NAME, content)
     def installation_id(self) -> str:
-        with self._identity_lock:
+        with self._identity_lock, JsonStore.exclusive():
             identity = JsonStore.read_file("installation")
             if not identity.get("id"):
                 identity = {"id": str(uuid4())}
-                if not JsonStore.write_file("installation", identity):
+                if not JsonStore._write_file("installation", identity):
                     raise RuntimeError("Unable to save installation identity.")
             return identity["id"]
 

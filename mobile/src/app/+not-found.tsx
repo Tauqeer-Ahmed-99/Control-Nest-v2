@@ -1,31 +1,69 @@
-import MessageContainer from "@/components/message-container";
-import { Link, Stack } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import Feather from "@expo/vector-icons/Feather";
+import { Button, Text, useTheme } from "@rneui/themed";
+import { router } from "expo-router";
+import { ScrollView, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 export default function NotFoundScreen() {
+  const { theme } = useTheme();
+
   return (
-    <>
-      <Stack.Screen options={{ title: "Oops!" }} />
-      <View style={styles.container}>
-        <MessageContainer message="This screen doesn't exist.">
-          <Link href="/auth" style={styles.link}>
-            <Text>Go to home screen!</Text>
-          </Link>
-        </MessageContainer>
-      </View>
-    </>
+    <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.primary }}>
+      <ScrollView
+        contentContainerStyle={{
+          flexGrow: 1,
+          justifyContent: "center",
+          padding: 24,
+        }}
+      >
+        <View
+          style={{
+            width: "100%",
+            maxWidth: 440,
+            alignSelf: "center",
+            alignItems: "center",
+            gap: 24,
+          }}
+        >
+          <Feather
+            name="compass"
+            size={44}
+            color={theme.colors.grey2}
+            accessible={false}
+          />
+          <View style={{ gap: 12 }}>
+            <Text
+              accessibilityRole="header"
+              style={{
+                fontFamily: "Lexend_600SemiBold",
+                fontSize: 28,
+                lineHeight: 36,
+                letterSpacing: -0.6,
+                textAlign: "center",
+              }}
+            >
+              Page not found
+            </Text>
+            <Text
+              style={{
+                fontFamily: "Lexend_400Regular",
+                fontSize: 16,
+                lineHeight: 24,
+                color: theme.colors.grey2,
+                textAlign: "center",
+              }}
+            >
+              This page may have moved or the link may be out of date. Return to
+              Control Nest to continue.
+            </Text>
+          </View>
+          <Button
+            title="Back to Control Nest"
+            onPress={() => router.replace("/")}
+            containerStyle={{ width: "100%" }}
+          />
+        </View>
+      </ScrollView>
+    </SafeAreaView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    padding: 20,
-  },
-  link: {
-    marginTop: 15,
-    paddingVertical: 15,
-  },
-});

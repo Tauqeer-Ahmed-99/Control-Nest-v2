@@ -144,6 +144,18 @@ export default function Settings() {
           icon="users"
           onPress={() => router.push("/(tabs)/house-members")}
         />
+        <ChoiceRow
+          title="Firmware updates"
+          icon="download-cloud"
+          detail="Controller versions, progress, and recovery"
+          onPress={() => router.push("/(tabs)/firmware-updates")}
+        />
+        <ChoiceRow
+          title="App updates"
+          icon="smartphone"
+          detail="Check and apply mobile updates"
+          onPress={() => router.push("/app-updates")}
+        />
       </View>
       <View style={{ gap: 12 }}>
         <Text accessibilityRole="header" style={sectionTitle}>

@@ -15,8 +15,7 @@ import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import { Button, Text, useTheme } from "@rneui/themed";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
-import { TouchableOpacity, View } from "react-native";
-import { ScrollView } from "react-native-virtualized-view";
+import { ScrollView, TouchableOpacity, View } from "react-native";
 
 const DeviceComponent = () => {
   const { theme } = useTheme();
