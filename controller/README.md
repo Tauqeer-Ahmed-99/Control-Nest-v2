@@ -4,7 +4,7 @@ The controller is a Python FastAPI service for the Control Nest Raspberry Pi. A 
 
 The controller always runs its normal installed services. Selecting a different source branch changes the code, while identity, persistent stores, authorization, scheduling and GPIO operations retain their normal behavior. Mobile preview APKs use the same real LAN/tunnel controller interfaces as production APKs.
 
-The `ota` branch's public `SERVER_URL` default points to `https://control-nest-v2-git-ota-tauqeerahmed99s-projects.vercel.app`. This is the selected cloud API origin; local controller operations remain real. On bootstrapped installations, systemd supplies the effective upstream from the protected `/etc/control-nest/controller.env` deployment configuration.
+The public `SERVER_URL` default points to `https://controlnest-v2.nmt-solutions.in`. For a preview deployment, configure the preview API origin before bootstrap. On bootstrapped installations, systemd supplies the effective upstream from the protected `/etc/control-nest/controller.env` deployment configuration. Existing deployment settings, identity and pairing survive code updates.
 
 ## Install
 

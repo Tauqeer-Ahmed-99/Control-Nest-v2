@@ -41,8 +41,9 @@ The cloud API origin is
 
 Development uses the same preview API; the production profile uses
 `https://controlnest-v2.nmt-solutions.in`. Each profile pins its public server URL
-in `eas.json`, matching the corresponding EAS environment. The `ota` branch's
-local mobile `.env` also uses the preview API. EAS project ID, Clerk publishable
+in `eas.json`, matching the corresponding EAS environment. The tracked local
+mobile `.env` defaults to production; use ignored `.env.local` to select the
+preview API for local development. EAS project ID, Clerk publishable
 key and release-policy public keys are provisioned in all three environments.
 These public settings are bundled into the app, so changing them requires a new
 build or compatible OTA update on the installed app's channel.
@@ -99,7 +100,7 @@ API keys are held only while submitting setup, cleared after pairing, and persis
 
 ## UI verification
 
-Run `npm run lint`, `npx tsc --noEmit`, and `node --test tests/*.test.mjs` from `mobile` (the tests use Node's built-in TypeScript support on Node 22.18 or later).
+Run `npm run lint` and `npx tsc --noEmit` from `mobile`, then follow the real-device walkthrough below.
 
 The `/` entry route waits for Clerk and the saved house selection before redirecting
 to sign-in, house selection, or Home. The splash uses the same readiness state so
