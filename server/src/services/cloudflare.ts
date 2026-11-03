@@ -84,7 +84,8 @@ const publishAppService = async ({
   hostname: string;
   configuration: Cloudflare.ZeroTrust.Tunnels.Cloudflared.Configurations.ConfigurationUpdateResponse;
 }> => {
-  const hostname = `https://${tunnelName}.nmt-solutions.in`;
+  const dnsHostname = `${tunnelName}.nmt-solutions.in`;
+  const hostname = `https://${dnsHostname}`;
 
   const configuration =
     await cloudflare.zeroTrust.tunnels.cloudflared.configurations.update(
@@ -94,8 +95,8 @@ const publishAppService = async ({
         config: {
           ingress: [
             {
-              hostname: hostname,
-              service: "http://0.0.0.0:8000",
+              hostname: dnsHostname,
+              service: "http://127.0.0.1:8000",
               originRequest: {},
             },
             { hostname: "", service: "http_status:404" },
@@ -150,7 +151,8 @@ export const createTunnelAndPublishAppService = async ({
     await tryCatch(deleteTunnel({ tunnelId: cloudflareTunnel.id! }));
 
     throw new APIError({
-      message: "Error occured while publishing cloudflare app service.",
+      message: "Unable to configure the controller connection. Please try again.",
+      statusCode: 502,
     });
   }
 
