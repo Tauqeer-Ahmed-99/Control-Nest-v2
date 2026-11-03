@@ -17,6 +17,10 @@ import { AlertDialog } from "radix-ui";
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  ControllersSkeleton,
+  DashboardSkeleton,
+} from "@/components/site/dashboard-skeleton";
 
 type Home = { id: string; name: string; isAdmin: boolean };
 type Controller = {
@@ -88,18 +92,29 @@ export function HouseDashboard() {
   );
 
   const loadHouses = useCallback(async () => {
-    const data = await api<Home[]>("houses");
-    setHouses(data);
-    setHouseId((current) =>
-      data.some((house) => house.id === current) ? current : data[0]?.id || "",
-    );
+    setLoading(true);
+    try {
+      const data = await api<Home[]>("houses");
+      setHouses(data);
+      setHouseId((current) =>
+        data.some((house) => house.id === current) ? current : data[0]?.id || "",
+      );
+    } finally {
+      setLoading(false);
+    }
   }, [api]);
   const loadControllers = useCallback(async () => {
-    if (houseId)
+    if (!houseId) return;
+    setControllerData(null);
+    try {
       setControllerData({
         houseId,
         items: await api<Controller[]>(`house/controllers?houseId=${houseId}`),
       });
+    } catch (error) {
+      setControllerData({ houseId, items: [], failed: true });
+      throw error;
+    }
   }, [api, houseId]);
   useEffect(() => {
     let active = true;
@@ -326,7 +341,7 @@ export function HouseDashboard() {
         </section>
       )}
       {loading ? (
-        <p role="status">Loading your houses...</p>
+        <DashboardSkeleton />
       ) : (
         !needsProfile && (
           <>
@@ -524,9 +539,7 @@ export function HouseDashboard() {
                   </p>
                 )}
                 {controllersLoading ? (
-                  <p className="account-empty" role="status">
-                    Loading controllers...
-                  </p>
+                  <ControllersSkeleton />
                 ) : controllerData?.failed ? (
                   <p className="account-empty">
                     Could not load controllers. Use refresh to try again.
@@ -674,9 +687,9 @@ export function HouseDashboard() {
                   <li>
                     <strong>Using your phone</strong>
                     <p>
-                      Sign in with the same email. Open Settings &rarr; Houses &
-                      controllers, select the Pi on your Wi-Fi, and paste this
-                      key.
+                      Sign in with the same account and choose this house.
+                      Open Settings &gt; Controllers &gt; Connect a controller,
+                      select the Pi on your Wi-Fi, and paste this key.
                     </p>
                   </li>
                   <li>
@@ -685,7 +698,7 @@ export function HouseDashboard() {
                       After installation, run this command on the Pi and paste
                       your key when prompted.
                     </p>
-                    <code>bash controller/scripts/setup.sh</code>
+                    <code>bash ~/Control-Nest-v2/controller/scripts/setup.sh</code>
                   </li>
                 </ol>
                 <p className="account-hint">

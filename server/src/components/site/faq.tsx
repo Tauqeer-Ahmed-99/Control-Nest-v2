@@ -26,7 +26,7 @@ const questions = [
   ],
   [
     "Where can I get the mobile app?",
-    "Get the current Control Nest build from NMT Solutions OPC Pvt Ltd. Install it on your phone, then follow the setup guide to pair your Pi.",
+    "Download the Android APK from the setup guide. Install it on your phone, then follow the pairing steps to connect your Pi.",
   ],
 ];
 

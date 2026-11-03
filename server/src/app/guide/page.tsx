@@ -12,7 +12,12 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CodeBlock } from "@/components/site/code-block";
-import { installerCommand, updaterCommand } from "@/lib/site";
+import {
+  androidDownloadUrl,
+  controllerBootstrapCommand,
+  installerCommand,
+  repositoryUrl,
+} from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Setup guide",
@@ -27,7 +32,7 @@ const contents = [
   ["pairing", "Pair in the app"],
   ["first-device", "Add rooms and devices"],
   ["schedules", "Set a schedule"],
-  ["maintenance", "Update AutoPiHub"],
+  ["maintenance", "Updates and recovery"],
   ["troubleshooting", "Troubleshooting"],
 ];
 
@@ -75,6 +80,11 @@ export default function Guide() {
               Pair a controller <ArrowUpRight aria-hidden="true" />
             </a>
           </Button>
+          <Button asChild variant="outline">
+            <a href={androidDownloadUrl}>
+              Download Android APK <ArrowUpRight aria-hidden="true" />
+            </a>
+          </Button>
         </div>
       </div>
       <div className="guide-layout wrap">
@@ -107,8 +117,8 @@ export default function Guide() {
                 and <code>tar</code> installed.
               </li>
               <li>
-                The Control Nest app on your phone. Get the current build from
-                NMT Solutions OPC Pvt Ltd.
+                An Android phone with the{" "}
+                <a href={androidDownloadUrl}>Control Nest APK</a> installed.
               </li>
               <li>
                 Internet access and the same local network for your phone and Pi
@@ -187,7 +197,8 @@ export default function Guide() {
             <p>
               Run this as your normal Pi user. The installer uses{" "}
               <code>sudo</code> when needed. It installs AutoPiHub and starts it
-              as a service that runs on boot.
+              as a service that runs on boot. The project goes in{" "}
+              <code>~/Control-Nest-v2</code>.
             </p>
             <p>
               When installation finishes, check that the service is running:
@@ -198,7 +209,9 @@ export default function Guide() {
             />
             <p>
               Look for <code>active (running)</code>. Keep the Pi powered on,
-              then continue in the app.
+              then create your house and pair it below. After pairing, follow{" "}
+              <a href="#maintenance">Updates and recovery</a> to enable signed
+              controller updates.
             </p>
           </section>
 
@@ -206,14 +219,44 @@ export default function Guide() {
             <span className="eyebrow">On your phone</span>
             <h2>Pair your controller.</h2>
             <ol>
-              <li>On this website, create your account with email and verify your address.</li>
-              <li>Open <Link href="/dashboard">My houses</Link>, create a house, and add a named controller. Copy its API key.</li>
+              <li>
+                On this website, create your account with your email, first
+                name, and last name. Verify your email address.
+              </li>
+              <li>
+                Open <Link href="/dashboard">My houses</Link>, create a house,
+                and add a named controller. Copy its API key. The full key is
+                shown once.
+              </li>
               <li>Connect your phone and Pi to the same trusted Wi-Fi network.</li>
-              <li>In Control Nest, sign in with the same email and allow local network access.</li>
-              <li>Open Houses &amp; controllers, select your Pi, paste its API key, and tap Connect controller.</li>
-              <li>Select your house and tap Open house. Add another controller to the same house for each additional Pi.</li>
+              <li>
+                In Control Nest, sign in with the same account and choose your
+                house.
+              </li>
+              <li>
+                Open Settings &gt; Controllers &gt; Connect a controller, or
+                Add &gt; Controller. Allow local network access and select your
+                Pi under Nearby controllers.
+              </li>
+              <li>
+                Paste its API key and tap Connect controller, then Done. Choose
+                Open house when ready.
+              </li>
             </ol>
-            <p>Prefer to set up on the Pi? After installation, run <code>bash ~/Control-Nest-v2/controller/scripts/setup.sh</code> and paste the key at the hidden prompt.</p>
+            <p>
+              Create a separate controller entry and key for each Pi. Repeat
+              these steps to connect more Pis to the same house. Members use
+              their own accounts for everyday control.
+            </p>
+            <p>
+              Prefer to pair on the Pi? After installation, run the command
+              below and paste the key at the hidden prompt. The script stops
+              AutoPiHub during setup and restarts it afterward.
+            </p>
+            <CodeBlock
+              label="Raspberry Pi · pair this controller"
+              code="bash ~/Control-Nest-v2/controller/scripts/setup.sh"
+            />
             <Callout>
               <p>
                 Pairing sets up your remote connection automatically. To control
@@ -227,13 +270,18 @@ export default function Guide() {
             <span className="eyebrow">In Control Nest</span>
             <h2>Add rooms and devices.</h2>
             <ol>
-              <li>Tap Create and add a room, such as Living room.</li>
-              <li>Add a device. Select its room and controller, then enter a name.</li>
+              <li>Tap Add &gt; Room and name a room, such as Living room.</li>
               <li>
-                Choose the header pin connected to its relay. Match the app
-                selection to your wiring.
+                Tap Add &gt; Device, enter its name, and choose its room.
               </li>
-              <li>Enter the device power consumption in watts and save.</li>
+              <li>
+                Select its controller and an available header pin connected to
+                its relay. Match the app selection to your wiring.
+              </li>
+              <li>
+                Optionally add a power rating in watts for energy estimates,
+                then save the device.
+              </li>
               <li>
                 Turn the device on and off in the app. Confirm the connected
                 device responds.
@@ -260,17 +308,63 @@ export default function Guide() {
           </section>
 
           <section id="maintenance">
-            <span className="eyebrow">On your Raspberry Pi</span>
-            <h2>Update AutoPiHub.</h2>
-            <p>Run the updater on a Pi that already has AutoPiHub installed:</p>
+            <span className="eyebrow">Maintenance</span>
+            <h2>Updates and recovery.</h2>
+            <h3>Enable controller updates once</h3>
+            <p>
+              From your trusted installation, connect over SSH and run these
+              commands as the normal Pi user:
+            </p>
             <CodeBlock
-              label="Raspberry Pi · update AutoPiHub"
-              code={updaterCommand}
+              label="Raspberry Pi · enable signed updates"
+              code={controllerBootstrapCommand}
             />
             <p>
-              The updater installs the latest controller files and restarts the
-              service. Check that it reports <code>active (running)</code> when
-              it finishes.
+              This installs the protected updater and preserves the Pi&apos;s
+              identity, pairing, and data. If the app reports Bootstrap
+              required, complete this step before starting a controller update.
+            </p>
+            <h3>Update a controller</h3>
+            <ol>
+              <li>Sign in to Control Nest as a house admin.</li>
+              <li>
+                Open Settings &gt; Firmware updates and find the controller.
+              </li>
+              <li>
+                Review its available version and release notes. Start the
+                update when one is available, then follow its progress here.
+              </li>
+            </ol>
+            <p>
+              The updater installs an eligible signed release and snapshots
+              persistent data. If activation fails, it restores the recorded
+              working release and data. Installation continues if you close the
+              app or your phone disconnects. Keep the Pi powered on.
+            </p>
+            <h3>Update the app</h3>
+            <p>
+              Open Settings &gt; App updates, tap Check for updates, and restart
+              when prompted to apply a downloaded update. Some changes require
+              a new app build. Use Install app build when offered, or get the{" "}
+              <a href={androidDownloadUrl}>published Android APK</a>.
+            </p>
+            <h3>Recover a controller</h3>
+            <p>
+              In Firmware updates, use Restore when a previous release is
+              available. For LAN recovery, a house admin must prepare recovery
+              access while online. The saved authorization lasts up to 24 hours
+              and can restore the recorded working release over the local
+              network. Without valid recovery access, use authenticated SSH or
+              physical owner recovery.
+            </p>
+            <p>
+              Read the{" "}
+              <a href={`${repositoryUrl}/blob/main/docs/ota-operations.md`}>
+                recovery instructions
+              </a>{" "}
+              before attempting restoration. Raspberry Pi OS updates are
+              separate maintenance. Get published downloads and installation
+              notes from <a href={`${repositoryUrl}/releases`}>GitHub Releases</a>.
             </p>
           </section>
 
@@ -286,7 +380,9 @@ export default function Guide() {
             <h3>Pairing or login fails</h3>
             <p>
               Check the internet connection on both devices. Sign in again and
-              retry. Copy the complete key for this controller from My houses. If it was lost or revoked, replace it on the website and paste the new key on the same Pi.
+              retry. Use the complete key for this controller. If it was lost
+              or revoked, replace it in My houses and paste the replacement on
+              the same Pi.
             </p>
             <h3>Remote control fails</h3>
             <p>
@@ -317,7 +413,7 @@ export default function Guide() {
             <div className="guide-complete">
               <CircleCheck size={28} />
               <h2>Ready to add another room?</h2>
-              <p>Use Create in the app to add more rooms and devices.</p>
+              <p>Use Add in the app to add more rooms and devices.</p>
               <div className="hero-actions">
                 <Button asChild>
                   <Link href="/">
