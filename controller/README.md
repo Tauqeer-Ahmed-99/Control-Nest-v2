@@ -24,6 +24,18 @@ curl --fail --location --silent --show-error https://raw.githubusercontent.com/T
 
 Installation installs required packages without running a full OS upgrade. After installation, run the bootstrap command below to enable protected OTA updates and recovery.
 
+The installer includes `build-essential`, `python3-dev`, `swig` and `liblgpio-dev` so GPIO dependencies such as `lgpio` can compile and link when a matching Python wheel is unavailable.
+
+If an earlier installation stopped with `error: command 'swig' failed: No such file or directory`, install the missing build prerequisites and rerun the downloaded installer as your normal Pi user:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y build-essential python3-dev swig liblgpio-dev
+bash ~/Control-Nest-v2/controller/scripts/install.sh
+```
+
+Use your installation path if you set `CONTROL_NEST_INSTALL_DIR`. Rerunning the installer keeps the existing `.env` and reuses the Python virtual environment.
+
 ## Update
 
 Bootstrap an existing trusted installation once over authenticated SSH:

@@ -6,7 +6,10 @@ echo "Updating packages..."
 sudo apt-get update -y
 
 echo "Installing system dependencies..."
-sudo apt-get install -y ca-certificates curl python3 python3-pip python3-venv
+# GPIO packages may need source builds when no wheel matches the Pi's Python.
+sudo apt-get install -y \
+  build-essential ca-certificates curl liblgpio-dev python3 python3-dev \
+  python3-pip python3-venv swig
 
 echo "Installing cloudflared..."
 
